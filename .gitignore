@@ -1,71 +1,47 @@
-# Dependencies
-node_modules/
-**/node_modules/
-vendor/
-**/vendor/
-
-# Environment files
-.env
-.env.*
-!.env.example
-**/.env
-**/.env.*
-!**/.env.example
-
-# Build outputs & caches
-dist/
-**/dist/
-build/
-**/build/
-dist-ssr/
-**/dist-ssr/
-.phpunit.cache/
-**/.phpunit.cache/
-.phpunit.result.cache
-
-# Laravel specific
-field-management-api/public/hot
-field-management-api/public/storage
-field-management-api/storage/*.key
-field-management-api/storage/pail
-field-management-api/storage/framework/cache/data/*
-field-management-api/storage/framework/sessions/*
-field-management-api/storage/framework/views/*
-field-management-api/storage/logs/*
-!field-management-api/storage/framework/cache/data/.gitignore
-!field-management-api/storage/framework/sessions/.gitignore
-!field-management-api/storage/framework/views/.gitignore
-!field-management-api/storage/logs/.gitignore
-
 # Logs
+logs
 *.log
-**/*.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# OS & Editor files
-.DS_Store
-Thumbs.db
-.vscode/
-**/.vscode/
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
 !.vscode/extensions.json
-.idea/
-**/.idea/
+.idea
+.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-.phpactor.json
-/.codex
-/.cursor/
-/.nova
-/.zed
 
-# Officer App (handled in separate repository)
-Officer-app/
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
-cloudflared.exe
+# Backend dependencies & storage
+vendor/
+**/vendor/
+*.sqlite
+*.sqlite-journal
+backend/storage/*.key
+backend/storage/framework/cache/data/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/storage/logs/*
+!backend/storage/framework/cache/data/.gitignore
+!backend/storage/framework/sessions/.gitignore
+!backend/storage/framework/views/.gitignore
+!backend/storage/logs/.gitignore

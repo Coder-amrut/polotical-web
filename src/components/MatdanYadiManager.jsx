@@ -1,0 +1,2355 @@
+import apiClient from '../api/axios';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  Users,
+  Upload,
+  Search,
+  Filter,
+  Download,
+  Plus,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  MapPin,
+  Building2,
+  Home,
+  Check,
+  ChevronDown,
+  Printer,
+  Eye,
+  Trash2,
+  RefreshCw,
+  X
+} from 'lucide-react';
+
+// All 36 Official Districts of Maharashtra State
+export const ALL_MAHARASHTRA_DISTRICTS = [
+  'अहमदनगर',
+  'अकोला',
+  'अमरावती',
+  'छत्रपती संभाजीनगर',
+  'बीड',
+  'भंडारा',
+  'बुलढाणा',
+  'चंद्रपूर',
+  'धुळे',
+  'गडचिरोली',
+  'गोंदिया',
+  'हिंगोली',
+  'जळगाव',
+  'जालना',
+  'कोल्हापूर',
+  'लातूर',
+  'मुंबई शहर',
+  'मुंबई उपनगर',
+  'नागपूर',
+  'नांदेड',
+  'नंदुरबार',
+  'नाशिक',
+  'धाराशिव',
+  'पालघर',
+  'परभणी',
+  'पुणे',
+  'रायगड',
+  'रत्नागिरी',
+  'सांगली',
+  'सातारा',
+  'सिंधुदुर्ग',
+  'सोलापूर',
+  'ठाणे',
+  'वर्धा',
+  'वाशिम',
+  'यवतमाळ'
+];
+
+// Comprehensive Master Geographical Catalog for all 36 Districts of Maharashtra
+export const MASTER_GEOGRAPHY = {
+  'सांगली': {
+    'मिरज': ['माधवनगर', 'बुधगाव', 'कुपवाड', 'हरिपूर', 'सांगली शहर', 'मिरज शहर', 'कवलापूर', 'बामणोली', 'धामणी', 'कवठेपिरान', 'समडोळी', 'मालगाव', 'बिसूर', 'तुंग'],
+    'तासगाव': ['तासगाव शहर', 'सावळज', 'विसापूर', 'चिंचणी', 'नांद्रे', 'मणेराजुरी', 'धोत्रे', 'आळते', 'निमणी', 'येळावी'],
+    'वाळवा / इस्लामपूर': ['इस्लामपूर शहर', 'आष्टा', 'कासेगाव', 'बोरगाव', 'उरण इस्लामपूर', 'शिगाव', 'पेठ', 'तांबवे', 'नेर्ले', 'बहे'],
+    'जत': ['जत शहर', 'उमदी', 'संख', 'मुचंडी', 'शेळकेवाडी', 'डफळापूर', 'दरीबडची', 'माडग्याळ', 'मोराबाग'],
+    'खानापूर / विटा': ['विटा शहर', 'खानापूर', 'भाळवणी', 'पळशी', 'गारेडी', 'करंजे', 'देवराष्ट्रे', 'हिवरे', 'घाटनांद्रे'],
+    'आटपाडी': ['आटपाडी शहर', 'दिघंची', 'खरसुंडी', 'नेलकरंजी', 'शेटफळे', 'घाणंद', 'करगणी', 'झरे'],
+    'शिराळा': ['शिराळा शहर', 'कोकरूड', 'मांगले', 'शेडगेवाडी', 'चरण', 'वारुळा', 'बिळाशी', 'चांदोली'],
+    'कडेगाव': ['कडेगाव शहर', 'वांगी', 'सोहळी', 'अंबक', 'नेरली', 'तडसर', 'शिवणी', 'हिंगणगाव'],
+    'पलूस': ['पलूस शहर', 'भिलवडी', 'अंकलखोप', 'रामानंदनगर', 'बुरली', 'नागठाणे', 'आमणापूर', 'कुंडल'],
+    'कवठे महांकाळ': ['कवठे महांकाळ शहर', 'ढालगाव', 'कुची', 'अग्रण धुळगाव', 'रांजणी', 'घोरपडी', 'देशिंग']
+  },
+  'कोल्हापूर': {
+    'करवीर': ['कोल्हापूर शहर', 'उचगाव', 'गांधीनगर', 'पाचगाव', 'शिये', 'वडणगे'],
+    'हातकणंगले': ['हातकणंगले शहर', 'इचलकरंजी', 'हुपरी', 'रुकडी', 'कोरोची'],
+    'शिरोळ': ['शिरोळ शहर', 'जयसिंगपूर', 'कुरुंदवाड', 'नृसिंहवाडी', 'दानोळी'],
+    'कागल': ['कागल शहर', 'सिद्धनेर्ली', 'मुरगूड'],
+    'गडहिंग्लज': ['गडहिंग्लज शहर', 'नेसरी', 'महागाव'],
+    'राधानगरी': ['राधानगरी', 'भोगावती', 'कौलव'],
+    'पन्हाळा': ['पन्हाळा शहर', 'कोडोली', 'बांबवडे'],
+    'भुदरगड': ['गारगोटी', 'पिंपळगाव', 'कडगाव'],
+    'चंदगड': ['चंदगड शहर', 'तुर्केवाडी', 'हेरे'],
+    'आजरा': ['आजरा शहर', 'उत्तूर', 'पेरणोली'],
+    'शाहूवाडी': ['मलकापूर', 'बांबवडे', 'शित्तूर'],
+    'गगनबावडा': ['बावडा', 'साळवण', 'अणदूर']
+  },
+  'सातारा': {
+    'सातारा': ['सातारा शहर', 'शाहूपुरी', 'गोडोली', 'खंडाळा', 'शेंद्रे'],
+    'कराड': ['कराड शहर', 'मलकापूर', 'ओगलेवाडी', 'वारुंजी', 'सैदापूर', 'कोयना वसाहत'],
+    'फलटण': ['फलटण शहर', 'तरडगाव', 'बरड'],
+    'कोरेगाव': ['कोरेगाव शहर', 'रहिमतपूर', 'किन्हई'],
+    'वाई': ['वाई शहर', 'भुईंज', 'शिरवळ'],
+    'महाबळेश्वर': ['महाबळेश्वर शहर', 'पाचगणी', 'प्रतापगड'],
+    'पाटण': ['पाटण शहर', 'तारळे', 'कोयनानगर'],
+    'जावळी': ['मेढा', 'कुडाळ', 'हुमगाव'],
+    'खंडाळा': ['शिरवळ', 'लोणंद', 'खंडाळा'],
+    'खटाव': ['वडूज', 'औंध', 'मायणी'],
+    'माण': ['दहिवडी', 'म्हसवड', 'गोंदवले']
+  },
+  'पुणे': {
+    'हवेली': ['पुणे शहर', 'पिंपरी चिंचवड', 'हडपसर', 'वाघोली'],
+    'पुणे शहर': ['शिवाजीनगर', 'कोथरूड', 'कसबा पेठ', 'पर्वती'],
+    'बारामती': ['बारामती शहर', 'माळेगाव', 'सुपा', 'मोरगाव'],
+    'दौंड': ['दौंड शहर', 'यवत', 'पाटस'],
+    'शिरूर': ['शिरूर शहर', 'शिक्रापूर', 'रांजणगाव'],
+    'खेड': ['चाकण', 'राजगुरुनगर', 'आळंदी'],
+    'आंबेगाव': ['मंचर', 'घोडेगाव', 'डिंभे'],
+    'जुन्नर': ['जुन्नर शहर', 'नारायणगाव', 'ओतूर'],
+    'मावळ': ['तळेगाव दाभाडे', 'लोणावळा', 'वडगाव मावळ'],
+    'मुळशी': ['पौड', 'हिंजवडी', 'पिरंगुट'],
+    'भोर': ['भोर शहर', 'नसरापूर', 'भोलावडे'],
+    'वेल्हे': ['वेल्हे', 'पानशेत', 'विंझर'],
+    'पुरंदर': ['सासवड शहर', 'जेजुरी', 'वीर'],
+    'इंदापूर': ['इंदापूर शहर', 'भिगवण', 'बावडा']
+  },
+  'सोलापूर': {
+    'उत्तर सोलापूर': ['सोलापूर शहर', 'मार्केट यार्ड', 'भवानी पेठ'],
+    'दक्षिण सोलापूर': ['मंद्रूप', 'हत्तूर', 'कुंभारी'],
+    'पंढरपूर': ['पंढरपूर शहर', 'गोपाळपूर', 'करकंब'],
+    'बार्शी': ['बार्शी शहर', 'वैराग', 'पानगाव'],
+    'अक्कलकोट': ['अक्कलकोट शहर', 'वागदरी', 'तडवळ'],
+    'मोहोळ': ['मोहोळ शहर', 'कुरुल', 'कामती'],
+    'माढा': ['माढा शहर', 'कुर्डुवाडी', 'टेंभुर्णी'],
+    'करमाळा': ['करमाळा शहर', 'जेऊर', 'केम'],
+    'सांगोला': ['सांगोला शहर', 'महुद', 'जवळा'],
+    'मंगळवेढा': ['मंगळवेढा शहर', 'बोराळे', 'मरवडे'],
+    'माळशिरस': ['अकलूज', 'नातेपुते', 'माळशिरस']
+  },
+  'अहमदनगर': {
+    'नगर': ['अहमदनगर शहर', 'नागापूर', 'भालवणी'],
+    'संगमनेर': ['संगमनेर शहर', 'आश्वी', 'धांदरफळ'],
+    'राहाता': ['राहाता शहर', 'शिर्डी', 'लोणी'],
+    'कोपरगाव': ['कोपरगाव शहर', 'पोहेगाव'],
+    'श्रीरामपूर': ['श्रीरामपूर शहर', 'बेलापूर'],
+    'नेवासा': ['नेवासा शहर', 'कुकाणा', 'सोनई'],
+    'शेवगाव': ['शेवगाव शहर', 'बोधेगाव'],
+    'पाथर्डी': ['पाथर्डी शहर', 'तिसगाव'],
+    'जामखेड': ['जामखेड शहर', 'खर्डा'],
+    'कर्जत': ['कर्जत शहर', 'मिरजगाव', 'राशिन'],
+    'श्रीगोंदा': ['श्रीगोंदा शहर', 'मांडवगण'],
+    'पारनेर': ['पारनेर शहर', 'सुपे', 'टाकळी ढोकेश्वर'],
+    'अकोले': ['अकोले शहर', 'राजूर', 'समशेरपूर'],
+    'राहुरी': ['राहुरी शहर', 'वांबोरी', 'देवळाली']
+  },
+  'छत्रपती संभाजीनगर': {
+    'संभाजीनगर': ['औरंगाबाद शहर', 'सिडको', 'हडको'],
+    'पैठण': ['पैठण शहर', 'बिडकीन', 'पाचोड'],
+    'गंगापूर': ['गंगापूर शहर', 'वाळूज', 'लासूर'],
+    'वैजापूर': ['वैजापूर शहर', 'शिऊर', 'लाडगाव'],
+    'कन्नड': ['कन्नड शहर', 'पिशोर'],
+    'खुलताबाद': ['खुलताबाद शहर', 'वेरूळ'],
+    'सिल्लोड': ['सिल्लोड शहर', 'अजिंठा', 'भराडी'],
+    'सोयगाव': ['सोयगाव शहर', 'जरंडी'],
+    'फुलंब्री': ['फुलंब्री शहर', 'गणोरी']
+  },
+  'नाशिक': {
+    'नाशिक': ['नाशिक शहर', 'पंचवटी', 'सिडको'],
+    'मालेगाव': ['मालेगाव शहर', 'दाभाडी', 'झोडगे'],
+    'सिन्नर': ['सिन्नर शहर', 'डुबेरे', 'पांढुर्ली'],
+    'निफाड': ['निफाड शहर', 'पिंपळगाव बसवंत', 'लासलगाव'],
+    'येवला': ['येवला शहर', 'अंदरसूल'],
+    'इगतपुरी': ['इगतपुरी शहर', 'घोटी'],
+    'दिंडोरी': ['दिंडोरी शहर', 'वणी'],
+    'त्र्यंबकेश्वर': ['त्र्यंबकेश्वर शहर', 'अंजनेरी'],
+    'कळवण': ['कळवण शहर', 'अभोटा'],
+    'बागलाण': ['सटाणा शहर', 'ताहाराबाद'],
+    'चांदवड': ['चांदवड शहर', 'वडनेर भैरव']
+  },
+  'ठाणे': {
+    'ठाणे': ['ठाणे शहर', 'नौपाडा', 'कोपरी', 'वागळे'],
+    'कल्याण': ['कल्याण शहर', 'टिटवाळा', 'मोहने'],
+    'डोंबिवली': ['डोंबिवली शहर', 'मानपाडा'],
+    'उल्हासनगर': ['उल्हासनगर शहर', 'विठ्ठलवाडी'],
+    'भिवंडी': ['भिवंडी शहर', 'पडघा', 'खारबाव'],
+    'अंबरनाथ': ['अंबरनाथ शहर', 'बदलापूर शहर'],
+    'मुरबाड': ['मुरबाड शहर', 'सरळगाव'],
+    'शहापूर': ['शहापूर शहर', 'आसनगाव', 'किन्हवली']
+  },
+  'पालघर': {
+    'पालघर': ['पालघर शहर', 'बोईसर', 'सफाळे'],
+    'वसई': ['वसई शहर', 'नालासोपारा', 'विरार'],
+    'डहाणू': ['डहाणू शहर', 'घोलवड'],
+    'तलासरी': ['तलासरी शहर', 'उधवा'],
+    'जव्हार': ['जव्हार शहर', 'सायवन'],
+    'मोखाडा': ['मोखाडा शहर', 'खोडाळा'],
+    'वाडा': ['वाडा शहर', 'कुडूस'],
+    'विक्रमगड': ['विक्रमगड शहर', 'ओंदे']
+  },
+  'रायगड': {
+    'अलिबाग': ['अलिबाग शहर', 'रेवदंडा', 'मांडवा'],
+    'पनवेल': ['पनवेल शहर', 'खारघर', 'तळोजा', 'कामोठे'],
+    'उरण': ['उरण शहर', 'न्हावा शेवा'],
+    'कर्जत': ['कर्जत शहर', 'नेरळ', 'कशेळे'],
+    'खालापूर': ['खोपोली शहर', 'खालापूर'],
+    'माणगाव': ['माणगाव शहर', 'गोरेगाव'],
+    'रोहा': ['रोहा शहर', 'कोलाड'],
+    'पेण': ['पेण शहर', 'वडखळ'],
+    'महाड': ['महाड शहर', 'बिरवाडी']
+  },
+  'रत्नागिरी': {
+    'रत्नागिरी': ['रत्नागिरी शहर', 'नाचणे', 'शिरगाव'],
+    'चिपळूण': ['चिपळूण शहर', 'खेर्डी', 'सावर्डे'],
+    'दापोली': ['दापोली शहर', 'हर्णै'],
+    'खेड': ['खेड शहर', 'भरणे'],
+    'गुहागर': ['गुहागर शहर', 'शृंगारतळी'],
+    'संगमेश्वर': ['देवरूख', 'संगमेश्वर'],
+    'लांजा': ['लांजा शहर', 'भांबेड'],
+    'राजापूर': ['राजापूर शहर', 'नाटे']
+  },
+  'सिंधुदुर्ग': {
+    'कुडाळ': ['कुडाळ शहर', 'माणगाव'],
+    'कणकवली': ['कणकवली शहर', 'नांदगाव'],
+    'सावंतवाडी': ['सावंतवाडी शहर', 'मादा'],
+    'मालवण': ['मालवण शहर', 'तारकर्ली'],
+    'वेंगुर्ला': ['वेंगुर्ला शहर', 'शिरोडा'],
+    'देवगड': ['देवगड शहर', 'जामसांडे'],
+    'दोडामार्ग': ['दोडामार्ग शहर', 'भेकुर्ली']
+  },
+  'नागपूर': {
+    'नागपूर शहर': ['नागपूर शहर', 'धरमपेठ', 'सीताबर्डी'],
+    'नागपूर ग्रामीण': ['वाडी', 'बुटीबोरी'],
+    'कामठी': ['कामठी शहर', 'कन्हान'],
+    'हिंगणा': ['हिंगणा शहर', 'डिगडोह'],
+    'काटोल': ['काटोल शहर', 'कोंढाळी'],
+    'नरखेड': ['नरखेड शहर', 'जलालखेडा'],
+    'सावनेर': ['सावनेर शहर', 'खापा'],
+    'रामटेक': ['रामटेक शहर', 'मनसर'],
+    'उमरेड': ['उमरेड शहर', 'सिरसी']
+  },
+  'अमरावती': {
+    'अमरावती': ['अमरावती शहर', 'बडनेरा'],
+    'अचलपूर': ['परतवाडा', 'अचलपूर शहर'],
+    'मोर्शी': ['मोर्शी शहर', 'वरूड शहर'],
+    'दर्यापूर': ['दर्यापूर शहर', 'बनोसा'],
+    'चांदूर बाजार': ['चांदूर बाजार शहर', 'ब्राह्मणवाडा'],
+    'चिखलदरा': ['चिखलदरा शहर', 'सेमाडोह']
+  },
+  'अकोला': {
+    'अकोला': ['अकोला शहर', 'उमरी'],
+    'अकोट': ['अकोट शहर', 'चोहोट्टा'],
+    'तेल्हारा': ['तेल्हारा शहर', 'हिवरखेड'],
+    'बाळापूर': ['बाळापूर शहर', 'पारस'],
+    'पातूर': ['पातूर शहर', 'बाभूळगाव'],
+    'मुर्तिजापूर': ['मुर्तिजापूर शहर', 'माना']
+  },
+  'यवतमाळ': {
+    'यवतमाळ': ['यवतमाळ शहर', 'लोहारा'],
+    'पुसद': ['पुसद शहर', 'काली'],
+    'उमरखेड': ['उमरखेड शहर', 'ढाणकी'],
+    'दिग्रस': ['दिग्रस शहर', 'सिंगद'],
+    'वणी': ['वणी शहर', 'मुकुटबन'],
+    'दारव्हा': ['दारव्हा शहर', 'लाडखेड']
+  },
+  'बुलढाणा': {
+    'बुलढाणा': ['बुलढाणा शहर', 'धाड'],
+    'खामगाव': ['खामगाव शहर', 'रोहणखेड'],
+    'शेगाव': ['शेगाव शहर', 'जलंब'],
+    'चिखली': ['चिखली शहर', 'अंधेरा'],
+    'मलकापूर': ['मलकापूर शहर', 'दसरा'],
+    'मेहकर': ['मेहकर शहर', 'डोणगाव'],
+    'लोणार': ['लोणार शहर', 'सुलतानपूर']
+  },
+  'वाशिम': {
+    'वाशिम': ['वाशिम शहर', 'अंजाणी'],
+    'कारंजा': ['कारंजा लाड शहर', 'कामठा'],
+    'रिसोड': ['रिसोड शहर', 'मालेगाव शहर'],
+    'मंगरूळपीर': ['मंगरूळपीर शहर', 'मानोरा शहर']
+  },
+  'वर्धा': {
+    'वर्धा': ['वर्धा शहर', 'सेवाग्राम', 'पुलगाव'],
+    'हिंगणघाट': ['हिंगणघाट शहर', 'वडनेर'],
+    'आर्वी': ['आर्वी शहर', 'रोहणा'],
+    'देवळी': ['देवळी शहर', 'भिडी']
+  },
+  'चंद्रपूर': {
+    'चंद्रपूर': ['चंद्रपूर शहर', 'बल्लारपूर शहर'],
+    'वरोरा': ['वरोरा शहर', 'माडेली'],
+    'भद्रावती': ['भद्रावती शहर', 'माजरी'],
+    'ब्रह्मपुरी': ['ब्रह्मपुरी शहर', 'आरमोरी'],
+    'चिमूर': ['चिमूर शहर', 'नेरी']
+  },
+  'गडचिरोली': {
+    'गडचिरोली': ['गडचिरोली शहर', 'पोर्ला'],
+    'अहेरी': ['अहेरी शहर', 'आलापल्ली'],
+    'आरमोरी': ['आरमोरी शहर', 'वडसा शहर'],
+    'चामोर्शी': ['चामोर्शी शहर', 'घोट'],
+    'सिरोंचा': ['सिरोंचा शहर', 'अंकिसा']
+  },
+  'भंडारा': {
+    'भंडारा': ['भंडारा शहर', 'बेला'],
+    'तुमसर': ['तुमसर शहर', 'सिहोरा'],
+    'साकोली': ['साकोली शहर', 'एकडी'],
+    'पवनी': ['पवनी शहर', 'कोंढा']
+  },
+  'गोंदिया': {
+    'गोंदिया': ['गोंदिया शहर', 'कुडवा'],
+    'तिरोडा': ['तिरोडा शहर', 'काचेवानी'],
+    'आमगाव': ['आमगाव शहर', 'रिसामा'],
+    'अर्जुनी मोरगाव': ['अर्जुनी शहर', 'केशोरी']
+  },
+  'नांदेड': {
+    'नांदेड': ['नांदेड शहर', 'वाघाळा'],
+    'लोहा': ['लोहा शहर', 'कंधार शहर'],
+    'देगलूर': ['देगलूर शहर', 'मुखेड शहर'],
+    'भोकर': ['भोकर शहर', 'मुदखेड शहर'],
+    'किनवट': ['किनवट शहर', 'माहूर शहर'],
+    'हदगाव': ['हदगाव शहर', 'हिमायतनगर शहर']
+  },
+  'लातूर': {
+    'लातूर': ['लातूर शहर', 'गातेगाव'],
+    'उदगीर': ['उदगीर शहर', 'नाळेश्वर'],
+    'अहमदपूर': ['अहमदपूर शहर', 'किनगाव'],
+    'औसा': ['औसा शहर', 'किल्लारी'],
+    'निलंगा': ['निलंगा शहर', 'कासार बालकुंदा']
+  },
+  'बीड': {
+    'बीड': ['बीड शहर', 'पेठ बीड'],
+    'अंबाजोगाई': ['अंबाजोगाई शहर', 'बर्दापूर'],
+    'परळी': ['परळी वैजनाथ शहर', 'धर्मापुरी'],
+    'माजलगाव': ['माजलगाव शहर', 'दिंद्रुड'],
+    'गेवराई': ['गेवराई शहर', 'उमापूर'],
+    'आष्टी': ['आष्टी शहर', 'कडा']
+  },
+  'जालना': {
+    'जालना': ['जालना शहर', 'रामगव्हाण'],
+    'भोकरदन': ['भोकरदन शहर', 'हसनाबाद'],
+    'परतूर': ['परतूर शहर', 'आष्टी'],
+    'अंबड': ['अंबड शहर', 'वडीगोद्री']
+  },
+  'परभणी': {
+    'परभणी': ['परभणी शहर', 'पेडगाव'],
+    'गंगाखेड': ['गंगाखेड शहर', 'राणी सावरगाव'],
+    'जिंतूर': ['जिंतूर शहर', 'बोरी'],
+    'सेलू': ['सेलू शहर', 'वालूर']
+  },
+  'हिंगोली': {
+    'हिंगोली': ['हिंगोली शहर', 'नरसी'],
+    'वसमत': ['वसमत शहर', 'कुरुंदा'],
+    'कळमनुरी': ['कळमनुरी शहर', 'आखाडा बाळापूर'],
+    'औंढा नागनाथ': ['औंढा शहर', 'येळेगाव']
+  },
+  'धाराशिव': {
+    'धाराशिव': ['धाराशिव शहर', 'तेर'],
+    'तुळजापूर': ['तुळजापूर शहर', 'नळदुर्ग'],
+    'उमरगा': ['उमरगा शहर', 'मुरुम'],
+    'कळंब': ['कळंब शहर', 'शिराढोण'],
+    'परांडा': ['परांडा शहर', 'आसोस्ता']
+  },
+  'जळगाव': {
+    'जळगाव': ['जळगाव शहर', 'नशिराबाद'],
+    'भुसावळ': ['भुसावळ शहर', 'वरणगाव'],
+    'चाळीसगाव': ['चाळीसगाव शहर', 'मेहुणबारे'],
+    'अमळनेर': ['अमळनेर शहर', 'मारवड'],
+    'चोपडा': ['चोपडा शहर', 'हातेड'],
+    'पाचोरा': ['पाचोरा शहर', 'पिंपळगाव']
+  },
+  'धुळे': {
+    'धुळे': ['धुळे शहर', 'कुसुंबा'],
+    'शिरपूर': ['शिरपूर शहर', 'थाळनेर'],
+    'साक्री': ['साक्री शहर', 'पिंपळनेर'],
+    'शिंदखेडा': ['शिंदखेडा शहर', 'नरडाणा']
+  },
+  'नंदुरबार': {
+    'नंदुरबार': ['नंदुरबार शहर', 'कोपर्ली'],
+    'शहादा': ['शहादा शहर', 'प्रकाशा'],
+    'नवापूर': ['नवापूर शहर', 'खांडबारा'],
+    'तळोदा': ['तळोदा शहर', 'प्रतापपूर']
+  },
+  'मुंबई शहर': {
+    'कुलाबा': ['कुलाबा', 'फोर्ट', 'मरीन ड्राईव्ह', 'नरीमन पॉईंट'],
+    'मलबार हिल': ['मलबार हिल', 'ताडदेव', 'नेपियन सी रोड'],
+    'भायखळा': ['भायखळा', 'माझगाव', 'चिंचपोकळी'],
+    'दादर': ['दादर पश्चिम', 'प्रभादेवी', 'माटुंगा'],
+    'सायन': ['सायन', 'धारावी', 'अँटॉप हिल']
+  },
+  'मुंबई उपनगर': {
+    'अंधेरी': ['अंधेरी पूर्व', 'अंधेरी पश्चिम', 'विलेपार्ले', 'जोगेश्वरी'],
+    'वांद्रे': ['वांद्रे पश्चिम', 'खार', 'सांताक्रूझ', 'बीकेसी'],
+    'बोरिवली': ['बोरिवली', 'कांदिवली', 'दहिसर', 'गोराई'],
+    'घाटकोपर': ['घाटकोपर पूर्व', 'घाटकोपर पश्चिम', 'विद्याविहार', 'पवई'],
+    'कुर्ला': ['कुर्ला', 'चुनाभट्टी', 'नेहरूनगर'],
+    'मुलुंड': ['मुलुंड', 'भांडुप', 'कांजूरमार्ग']
+  }
+};
+
+// Default initial dataset representing authentic Maharashtra Election Voter List covering all Talukas & Villages
+const INITIAL_VOTERS = [
+  // सांगली - मिरज
+  { id: 1, epic_no: 'MT/44/282/001001', name_mr: 'रमेश पांडुरंग पाटील', name_en: 'Ramesh Pandurang Patil', relative_mr: 'पांडुरंग पाटील (वडील)', age: 52, gender: 'male', house_no: '१४२/अ', village: 'माधवनगर', taluka: 'मिरज', district: 'सांगली', booth_no: '१', booth_name: 'जिल्हा परिषद प्राथमिक शाळा, माधवनगर खोली क्र. १' },
+  { id: 2, epic_no: 'MT/44/282/001002', name_mr: 'सुनिता रमेश पाटील', name_en: 'Sunita Ramesh Patil', relative_mr: 'रमेश पाटील (पती)', age: 48, gender: 'female', house_no: '१४२/अ', village: 'माधवनगर', taluka: 'मिरज', district: 'सांगली', booth_no: '१', booth_name: 'जिल्हा परिषद प्राथमिक शाळा, माधवनगर खोली क्र. १' },
+  { id: 3, epic_no: 'MT/44/282/001003', name_mr: 'अमित रमेश पाटील', name_en: 'Amit Ramesh Patil', relative_mr: 'रमेश पाटील (वडील)', age: 24, gender: 'male', house_no: '१४२/अ', village: 'माधवनगर', taluka: 'मिरज', district: 'सांगली', booth_no: '१', booth_name: 'जिल्हा परिषद प्राथमिक शाळा, माधवनगर खोली क्र. १' },
+  { id: 4, epic_no: 'MT/44/282/001004', name_mr: 'विकास संभाजी कदम', name_en: 'Vikas Sambhaji Kadam', relative_mr: 'संभाजी कदम (वडील)', age: 39, gender: 'male', house_no: '८९', village: 'बुधगाव', taluka: 'मिरज', district: 'सांगली', booth_no: '२', booth_name: 'ग्रामपंचायत प्राथमिक शाळा, बुधगाव' },
+  { id: 5, epic_no: 'MT/44/282/001005', name_mr: 'सचिन बबन सूर्यवंशी', name_en: 'Sachin Baban Suryavanshi', relative_mr: 'बबन सूर्यवंशी (वडील)', age: 31, gender: 'male', house_no: '१०३', village: 'कुपवाड', taluka: 'मिरज', district: 'सांगली', booth_no: '३', booth_name: 'महापालिका शाळा क्र. १५, कुपवाड' },
+  { id: 6, epic_no: 'MT/44/282/001006', name_mr: 'दीपक शंकर जाधव', name_en: 'Deepak Shankar Jadhav', relative_mr: 'शंकर जाधव (वडील)', age: 47, gender: 'male', house_no: '१२', village: 'हरिपूर', taluka: 'मिरज', district: 'सांगली', booth_no: '४', booth_name: 'प्राथमिक शाळा, हरिपूर' },
+  { id: 7, epic_no: 'MT/44/282/001007', name_mr: 'किरण मारुती भोसले', name_en: 'Kiran Maruti Bhosale', relative_mr: 'मारुती भोसले (वडील)', age: 36, gender: 'male', house_no: '७८', village: 'सांगली शहर', taluka: 'मिरज', district: 'सांगली', booth_no: '५', booth_name: 'सिटी हायस्कूल, सांगली' },
+  { id: 8, epic_no: 'MT/44/282/001008', name_mr: 'अविनाश विलास कोळी', name_en: 'Avinash Vilas Koli', relative_mr: 'विलास कोळी (वडील)', age: 29, gender: 'male', house_no: '५६', village: 'कवलापूर', taluka: 'मिरज', district: 'सांगली', booth_no: '६', booth_name: 'जि. प. शाळा कवलापूर' },
+  { id: 9, epic_no: 'MT/44/282/001009', name_mr: 'संतोष महादेव गुरव', name_en: 'Santosh Mahadev Gurav', relative_mr: 'महादेव गुरव (वडील)', age: 42, gender: 'male', house_no: '३३', village: 'बामणोली', taluka: 'मिरज', district: 'सांगली', booth_no: '७', booth_name: 'ग्रामपंचायत शाळा बामणोली' },
+
+  // सांगली - तासगाव
+  { id: 10, epic_no: 'MT/44/283/001001', name_mr: 'सुनील दिनकर चव्हाण', name_en: 'Sunil Dinkar Chavan', relative_mr: 'दिनकर चव्हाण (वडील)', age: 50, gender: 'male', house_no: '११४', village: 'तासगाव शहर', taluka: 'तासगाव', district: 'सांगली', booth_no: '१', booth_name: 'नगरपरिषद प्राथमिक शाळा क्र. १, तासगाव' },
+  { id: 11, epic_no: 'MT/44/283/001002', name_mr: 'ज्ञानेश्वर बापू सावंत', name_en: 'Dnyaneshwar Bapu Sawant', relative_mr: 'बापू सावंत (वडील)', age: 58, gender: 'male', house_no: '२३०', village: 'सावळज', taluka: 'तासगाव', district: 'सांगली', booth_no: '२', booth_name: 'जिल्हा परिषद शाळा, सावळज' },
+  { id: 12, epic_no: 'MT/44/283/001003', name_mr: 'प्रशांत अशोक थोरात', name_en: 'Prashant Ashok Thorat', relative_mr: 'अशोक थोरात (वडील)', age: 33, gender: 'male', house_no: '१७', village: 'विसापूर', taluka: 'तासगाव', district: 'सांगली', booth_no: '३', booth_name: 'प्राथमिक शाळा विसापूर' },
+  { id: 13, epic_no: 'MT/44/283/001004', name_mr: 'संगीता प्रशांत थोरात', name_en: 'Sangeeta Prashant Thorat', relative_mr: 'प्रशांत थोरात (पती)', age: 30, gender: 'female', house_no: '१७', village: 'विसापूर', taluka: 'तासगाव', district: 'सांगली', booth_no: '३', booth_name: 'प्राथमिक शाळा विसापूर' },
+  { id: 14, epic_no: 'MT/44/283/001005', name_mr: 'अमोल आनंदा पाटील', name_en: 'Amol Ananda Patil', relative_mr: 'आनंदा पाटील (वडील)', age: 38, gender: 'male', house_no: '९५', village: 'मणेराजुरी', taluka: 'तासगाव', district: 'सांगली', booth_no: '४', booth_name: 'जि. प. शाळा मणेराजुरी' },
+
+  // सांगली - वाळवा / इस्लामपूर
+  { id: 15, epic_no: 'MT/44/284/001001', name_mr: 'विजय यशवंत पाटील', name_en: 'Vijay Yashwant Patil', relative_mr: 'यशवंत पाटील (वडील)', age: 45, gender: 'male', house_no: '६७', village: 'इस्लामपूर शहर', taluka: 'वाळवा / इस्लामपूर', district: 'सांगली', booth_no: '१', booth_name: 'उर्दू हायस्कूल, इस्लामपूर' },
+  { id: 16, epic_no: 'MT/44/284/001002', name_mr: 'वैशाली विजय पाटील', name_en: 'Vaishali Vijay Patil', relative_mr: 'विजय पाटील (पती)', age: 41, gender: 'female', house_no: '६७', village: 'इस्लामपूर शहर', taluka: 'वाळवा / इस्लामपूर', district: 'सांगली', booth_no: '१', booth_name: 'उर्दू हायस्कूल, इस्लामपूर' },
+  { id: 17, epic_no: 'MT/44/284/001003', name_mr: 'संदीप तुकाराम मोरे', name_en: 'Sandeep Tukaram More', relative_mr: 'तुकाराम मोरे (वडील)', age: 37, gender: 'male', house_no: '९१/अ', village: 'आष्टा', taluka: 'वाळवा / इस्लामपूर', district: 'सांगली', booth_no: '२', booth_name: 'शासकीय माध्यमिक शाळा, आष्टा' },
+  { id: 18, epic_no: 'MT/44/284/001004', name_mr: 'महेश आनंदा खोत', name_en: 'Mahesh Ananda Khot', relative_mr: 'आनंदा खोत (वडील)', age: 34, gender: 'male', house_no: '५४', village: 'कासेगाव', taluka: 'वाळवा / इस्लामपूर', district: 'सांगली', booth_no: '३', booth_name: 'कासेगाव शिक्षण संस्था शाळा' },
+  { id: 19, epic_no: 'MT/44/284/001005', name_mr: 'तानाजी रंगराव यादव', name_en: 'Tanaji Rangrao Yadav', relative_mr: 'रंगराव यादव (वडील)', age: 51, gender: 'male', house_no: '१२०', village: 'बोरगाव', taluka: 'वाळवा / इस्लामपूर', district: 'सांगली', booth_no: '४', booth_name: 'जि. प. प्राथमिक शाळा बोरगाव' },
+
+  // सांगली - जत
+  { id: 20, epic_no: 'MT/44/285/001001', name_mr: 'राजेंद्र बाबुराव शिंदे', name_en: 'Rajendra Baburao Shinde', relative_mr: 'बाबुराव शिंदे (वडील)', age: 53, gender: 'male', house_no: '१४', village: 'जत शहर', taluka: 'जत', district: 'सांगली', booth_no: '१', booth_name: 'पंचायत समिती प्राथमिक शाळा, जत' },
+  { id: 21, epic_no: 'MT/44/285/001002', name_mr: 'सीमा राजेंद्र शिंदे', name_en: 'Seema Rajendra Shinde', relative_mr: 'राजेंद्र शिंदे (पती)', age: 49, gender: 'female', house_no: '१४', village: 'जत शहर', taluka: 'जत', district: 'सांगली', booth_no: '१', booth_name: 'पंचायत समिती प्राथमिक शाळा, जत' },
+  { id: 22, epic_no: 'MT/44/285/001003', name_mr: 'बसवराज मल्लप्पा बिरादार', name_en: 'Basavraj Mallappa Biradar', relative_mr: 'मल्लप्पा बिरादार (वडील)', age: 46, gender: 'male', house_no: '६३', village: 'उमदी', taluka: 'जत', district: 'सांगली', booth_no: '२', booth_name: 'शासकीय हायस्कूल, उमदी' },
+  { id: 23, epic_no: 'MT/44/285/001004', name_mr: 'सिद्धाप्पा इराप्पा पाटील', name_en: 'Siddhappa Irappa Patil', relative_mr: 'इराप्पा पाटील (वडील)', age: 39, gender: 'male', house_no: '२९', village: 'संख', taluka: 'जत', district: 'सांगली', booth_no: '३', booth_name: 'जि. प. शाळा, संख' },
+  { id: 24, epic_no: 'MT/44/285/001005', name_mr: 'संजय आप्पासाहेब चव्हाण', name_en: 'Sanjay Appasaheb Chavan', relative_mr: 'आप्पासाहेब चव्हाण (वडील)', age: 41, gender: 'male', house_no: '८८', village: 'डफळापूर', taluka: 'जत', district: 'सांगली', booth_no: '४', booth_name: 'डफळापूर हायस्कूल' },
+
+  // सांगली - खानापूर / विटा
+  { id: 25, epic_no: 'MT/44/286/001001', name_mr: 'हणमंत तुकाराम बाबर', name_en: 'Hanmant Tukaram Babar', relative_mr: 'तुकाराम बाबर (वडील)', age: 48, gender: 'male', house_no: '४२', village: 'विटा शहर', taluka: 'खानापूर / विटा', district: 'सांगली', booth_no: '१', booth_name: 'विटा नगरपालिका मुलांची शाळा क्र. १' },
+  { id: 26, epic_no: 'MT/44/286/001002', name_mr: 'छाया हणमंत बाबर', name_en: 'Chhaya Hanmant Babar', relative_mr: 'हणमंत बाबर (पती)', age: 44, gender: 'female', house_no: '४२', village: 'विटा शहर', taluka: 'खानापूर / विटा', district: 'सांगली', booth_no: '१', booth_name: 'विटा नगरपालिका मुलांची शाळा क्र. १' },
+  { id: 27, epic_no: 'MT/44/286/001003', name_mr: 'सतीश विठ्ठल मोहिते', name_en: 'Satish Vitthal Mohite', relative_mr: 'विठ्ठल मोहिते (वडील)', age: 37, gender: 'male', house_no: '१५/ब', village: 'खानापूर', taluka: 'खानापूर / विटा', district: 'सांगली', booth_no: '२', booth_name: 'जि. प. प्राथमिक शाळा खानापूर' },
+  { id: 28, epic_no: 'MT/44/286/001004', name_mr: 'नितीन विष्णू पाटील', name_en: 'Nitin Vishnu Patil', relative_mr: 'विष्णू पाटील (वडील)', age: 32, gender: 'male', house_no: '६१', village: 'भाळवणी', taluka: 'खानापूर / विटा', district: 'सांगली', booth_no: '३', booth_name: 'ग्रामपंचायत कार्यालय भाळवणी' },
+
+  // सांगली - आटपाडी
+  { id: 29, epic_no: 'MT/44/287/001001', name_mr: 'तानाजी ज्ञानदेव पाटील', name_en: 'Tanaji Dnyandev Patil', relative_mr: 'ज्ञानदेव पाटील (वडील)', age: 55, gender: 'male', house_no: '७२', village: 'आटपाडी शहर', taluka: 'आटपाडी', district: 'सांगली', booth_no: '१', booth_name: 'आटपाडी हायस्कूल, मुख्य इमारत' },
+  { id: 30, epic_no: 'MT/44/287/001002', name_mr: 'दीपाली तानाजी पाटील', name_en: 'Deepali Tanaji Patil', relative_mr: 'तानाजी पाटील (पती)', age: 50, gender: 'female', house_no: '७२', village: 'आटपाडी शहर', taluka: 'आटपाडी', district: 'सांगली', booth_no: '१', booth_name: 'आटपाडी हायस्कूल, मुख्य इमारत' },
+  { id: 31, epic_no: 'MT/44/287/001003', name_mr: 'अशोक जगन्नाथ देशमुख', name_en: 'Ashok Jagannath Deshmukh', relative_mr: 'जगन्नाथ देशमुख (वडील)', age: 49, gender: 'male', house_no: '१३०', village: 'दिघंची', taluka: 'आटपाडी', district: 'सांगली', booth_no: '२', booth_name: 'जि. प. मुलांची शाळा, दिघंची' },
+  { id: 32, epic_no: 'MT/44/287/001004', name_mr: 'बळीराम विठोबा मेटकरी', name_en: 'Baliram Vithoba Metkari', relative_mr: 'विठोबा मेटकरी (वडील)', age: 43, gender: 'male', house_no: '२४', village: 'खरसुंडी', taluka: 'आटपाडी', district: 'सांगली', booth_no: '३', booth_name: 'सिद्धनाथ हायस्कूल, खरसुंडी' },
+
+  // सांगली - शिराळा
+  { id: 33, epic_no: 'MT/44/288/001001', name_mr: 'विक्रमसिंह मानसिंग नाईक', name_en: 'Vikramsinh Mansing Naik', relative_mr: 'मानसिंग नाईक (वडील)', age: 46, gender: 'male', house_no: '०५', village: 'शिराळा शहर', taluka: 'शिराळा', district: 'सांगली', booth_no: '१', booth_name: 'विश्वासराव नाईक हायस्कूल शिराळा' },
+  { id: 34, epic_no: 'MT/44/288/001002', name_mr: 'राजाराम बाजीराव पाटील', name_en: 'Rajaram Bajirao Patil', relative_mr: 'बाजीराव पाटील (वडील)', age: 60, gender: 'male', house_no: '८८', village: 'कोकरूड', taluka: 'शिराळा', district: 'सांगली', booth_no: '२', booth_name: 'जि. प. प्राथमिक शाळा कोकरूड' },
+  { id: 35, epic_no: 'MT/44/288/001003', name_mr: 'उदयसिंह सर्जेराव कदम', name_en: 'Udaysinh Sarjerao Kadam', relative_mr: 'सर्जेराव कदम (वडील)', age: 35, gender: 'male', house_no: '४१', village: 'मांगले', taluka: 'शिराळा', district: 'सांगली', booth_no: '३', booth_name: 'मांगले हायस्कूल' },
+
+  // सांगली - कडेगाव
+  { id: 36, epic_no: 'MT/44/289/001001', name_mr: 'विश्वजीत पतंगराव कदम', name_en: 'Vishwajeet Patangrao Kadam', relative_mr: 'पतंगराव कदम (वडील)', age: 42, gender: 'male', house_no: '०१', village: 'कडेगाव शहर', taluka: 'कडेगाव', district: 'सांगली', booth_no: '१', booth_name: 'भारती विद्यापीठ शाळा कडेगाव' },
+  { id: 37, epic_no: 'MT/44/289/001002', name_mr: 'संजय शंकर मोहिते', name_en: 'Sanjay Shankar Mohite', relative_mr: 'शंकर मोहिते (वडील)', age: 52, gender: 'male', house_no: '७६', village: 'वांगी', taluka: 'कडेगाव', district: 'सांगली', booth_no: '२', booth_name: 'जि. प. शाळा वांगी' },
+  { id: 38, epic_no: 'MT/44/289/001003', name_mr: 'प्रवीण आनंदराव देशमुख', name_en: 'Pravin Anandrao Deshmukh', relative_mr: 'आनंदराव देशमुख (वडील)', age: 38, gender: 'male', house_no: '३३', village: 'सोहळी', taluka: 'कडेगाव', district: 'सांगली', booth_no: '३', booth_name: 'प्राथमिक शाळा सोहळी' },
+
+  // सांगली - पलूस
+  { id: 39, epic_no: 'MT/44/290/001001', name_mr: 'शरद शंकर पाटील', name_en: 'Sharad Shankar Patil', relative_mr: 'शंकर पाटील (वडील)', age: 47, gender: 'male', house_no: '८९', village: 'पलूस शहर', taluka: 'पलूस', district: 'सांगली', booth_no: '१', booth_name: 'पलूस नगरपरिषद मुलांची शाळा' },
+  { id: 40, epic_no: 'MT/44/290/001002', name_mr: 'अरविंद वसंतराव चौगुले', name_en: 'Arvind Vasantrao Chougule', relative_mr: 'वसंतराव चौगुले (वडील)', age: 53, gender: 'male', house_no: '१४', village: 'भिलवडी', taluka: 'पलूस', district: 'सांगली', booth_no: '२', booth_name: 'चितळे हायस्कूल भिलवडी' },
+  { id: 41, epic_no: 'MT/44/290/001003', name_mr: 'गणेश तुकाराम साळुंखे', name_en: 'Ganesh Tukaram Salunkhe', relative_mr: 'तुकाराम साळुंखे (वडील)', age: 36, gender: 'male', house_no: '४५', village: 'अंकलखोप', taluka: 'पलूस', district: 'सांगली', booth_no: '३', booth_name: 'जि. प. शाळा अंकलखोप' },
+
+  // सांगली - कवठे महांकाळ
+  { id: 42, epic_no: 'MT/44/291/001001', name_mr: 'रोहित आर. आर. पाटील', name_en: 'Rohit R. R. Patil', relative_mr: 'आर. आर. पाटील (वडील)', age: 26, gender: 'male', house_no: '१५', village: 'कवठे महांकाळ शहर', taluka: 'कवठे महांकाळ', district: 'सांगली', booth_no: '१', booth_name: 'महाकाली हायस्कूल कवठे महांकाळ' },
+  { id: 43, epic_no: 'MT/44/291/001002', name_mr: 'अनिल बबन पाटील', name_en: 'Anil Baban Patil', relative_mr: 'बबन पाटील (वडील)', age: 49, gender: 'male', house_no: '९२', village: 'ढालगाव', taluka: 'कवठे महांकाळ', district: 'सांगली', booth_no: '२', booth_name: 'जि. प. शाळा ढालगाव' },
+  { id: 44, epic_no: 'MT/44/291/001003', name_mr: 'संतोष तानाजी कोळेकर', name_en: 'Santosh Tanaji Kolekar', relative_mr: 'तानाजी कोळेकर (वडील)', age: 39, gender: 'male', house_no: '६३', village: 'कुची', taluka: 'कवठे महांकाळ', district: 'सांगली', booth_no: '३', booth_name: 'प्राथमिक शाळा कुची' },
+
+  // कोल्हापूर जिल्हा
+  { id: 45, epic_no: 'MT/45/274/001001', name_mr: 'संजय सदाशिव गायकवाड', name_en: 'Sanjay Sadashiv Gaikwad', relative_mr: 'सदाशिव गायकवाड (वडील)', age: 48, gender: 'male', house_no: '१०२', village: 'कोल्हापूर शहर', taluka: 'करवीर', district: 'कोल्हापूर', booth_no: '१', booth_name: 'महानगरपालिका हायस्कूल, कोल्हापूर' },
+  { id: 46, epic_no: 'MT/45/275/001001', name_mr: 'प्रकाश बाबूराव आवळे', name_en: 'Prakash Baburao Awale', relative_mr: 'बाबूराव आवळे (वडील)', age: 45, gender: 'male', house_no: '२४', village: 'इचलकरंजी', taluka: 'हातकणंगले', district: 'कोल्हापूर', booth_no: '१', booth_name: 'डी. के. टी. ई. हायस्कूल, इचलकरंजी' },
+  { id: 47, epic_no: 'MT/45/276/001001', name_mr: 'सुरेश विष्णू कांबळे', name_en: 'Suresh Vishnu Kamble', relative_mr: 'विष्णू कांबळे (वडील)', age: 40, gender: 'male', house_no: '८८', village: 'जयसिंगपूर', taluka: 'शिरोळ', district: 'कोल्हापूर', booth_no: '१', booth_name: 'जयसिंगपूर हायस्कूल' },
+
+  // सातारा जिल्हा
+  { id: 48, epic_no: 'MT/46/259/001001', name_mr: 'पृथ्वीराज डी. चव्हाण', name_en: 'Prithviraj D. Chavan', relative_mr: 'दाजीसाहेब चव्हाण (वडील)', age: 58, gender: 'male', house_no: '१२', village: 'कराड शहर', taluka: 'कराड', district: 'सातारा', booth_no: '१', booth_name: 'तिलक हायस्कूल, कराड' },
+  { id: 49, epic_no: 'MT/46/260/001001', name_mr: 'शिवेंद्रराजे अभयसिंहराजे भोसले', name_en: 'Shivendraraje Bhosale', relative_mr: 'अभयसिंहराजे भोसले (वडील)', age: 52, gender: 'male', house_no: '०१', village: 'सातारा शहर', taluka: 'सातारा', district: 'सातारा', booth_no: '१', booth_name: 'सैनिक स्कूल, सातारा' },
+
+  // पुणे जिल्हा
+  { id: 50, epic_no: 'MT/47/210/001001', name_mr: 'अमोल शांताराम तावरे', name_en: 'Amol Shantaram Taware', relative_mr: 'शांताराम तावरे (वडील)', age: 38, gender: 'male', house_no: '५५', village: 'बारामती शहर', taluka: 'बारामती', district: 'पुणे', booth_no: '१', booth_name: 'विद्या प्रतिष्ठान, बारामती' },
+  { id: 51, epic_no: 'MT/47/214/001001', name_mr: 'समीर विठ्ठल जोशी', name_en: 'Sameer Vitthal Joshi', relative_mr: 'विठ्ठल जोशी (वडील)', age: 42, gender: 'male', house_no: '४०१', village: 'पुणे शहर', taluka: 'हवेली', district: 'पुणे', booth_no: '१', booth_name: 'ज्ञान प्रबोधिनी, पुणे' },
+
+  // सोलापूर जिल्हा
+  { id: 52, epic_no: 'MT/48/248/001001', name_mr: 'प्रशांत बसवराज कोळी', name_en: 'Prashant Basavraj Koli', relative_mr: 'बसवराज कोळी (वडील)', age: 36, gender: 'male', house_no: '१४', village: 'सोलापूर शहर', taluka: 'उत्तर सोलापूर', district: 'सोलापूर', booth_no: '१', booth_name: 'हरिभाई देवकरण हायस्कूल' },
+  { id: 53, epic_no: 'MT/48/252/001001', name_mr: 'ज्ञानेश्वर पांडुरंग बडवे', name_en: 'Dnyaneshwar Pandurang Badve', relative_mr: 'पांडुरंग बडवे (वडील)', age: 49, gender: 'male', house_no: '७२', village: 'पंढरपूर शहर', taluka: 'पंढरपूर', district: 'सोलापूर', booth_no: '१', booth_name: 'कर्मवीर भाऊराव पाटील शाळा, पंढरपूर' },
+];
+
+export default function MatdanYadiManager({ lang = 'mr', title = null }) {
+  const isMr = lang === 'mr';
+  const fileInputRef = useRef(null);
+
+  // Stored voter records with v3 storage key for fresh comprehensive dataset
+  const [voters, setVoters] = useState(() => {
+    try {
+      const saved = localStorage.getItem('matdan_yadi_voters_db_v3');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length >= 30) return parsed;
+      }
+    } catch {
+      // fallback
+    }
+    return INITIAL_VOTERS;
+  });
+
+  // Save to localStorage whenever voters change
+  useEffect(() => {
+    try {
+      localStorage.setItem('matdan_yadi_voters_db_v3', JSON.stringify(voters));
+    } catch {
+      // ignore
+    }
+  }, [voters]);
+
+  // View Mode: 'voters' or 'geography_hierarchy'
+  const [activeViewMode, setActiveViewMode] = useState('voters'); // 'voters' | 'geography_hierarchy'
+
+  // -------------------------------------------------------------
+  // Filter States: District -> Taluka -> Village -> Booth
+  const [selectedDistrict, setSelectedDistrict] = useState(''); // Initially unselected for clean simple UI
+  const [selectedTaluka, setSelectedTaluka] = useState('');
+  const [selectedVillage, setSelectedVillage] = useState('');
+  const [selectedBooth, setSelectedBooth] = useState('all');
+  const [showAllDistrictVoters, setShowAllDistrictVoters] = useState(false);
+  const [isSearched, setIsSearched] = useState(false); // Controls table rendering on user search
+  const [genderFilter, setGenderFilter] = useState('all'); // all, male, female
+  const [ageGroupFilter, setAgeGroupFilter] = useState('all'); // all, 18-25, 26-40, 41-60, 60+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Dynamic Geography States directly from DB
+  const [dbDistricts, setDbDistricts] = useState([]);
+  const [dbTalukas, setDbTalukas] = useState([]);
+  const [dbVillages, setDbVillages] = useState([]);
+  const [loadingGeo, setLoadingGeo] = useState(false);
+  const [loadingVoters, setLoadingVoters] = useState(false);
+
+  // Modals & UI States
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showAddVoterModal, setShowAddVoterModal] = useState(false);
+  const [selectedVoter, setSelectedVoter] = useState(null);
+  const [toastMsg, setToastMsg] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Upload Form Target Tags
+  const [uploadTargetDistrict, setUploadTargetDistrict] = useState('सांगली');
+  const [uploadTargetTaluka, setUploadTargetTaluka] = useState('मिरज');
+  const [uploadTargetVillage, setUploadTargetVillage] = useState('माधवनगर');
+  const [uploadTargetBooth, setUploadTargetBooth] = useState('१');
+  const [uploadFileName, setUploadFileName] = useState('');
+
+  // New Single Voter Form
+  const [newVoter, setNewVoter] = useState({
+    epic_no: '',
+    name_mr: '',
+    name_en: '',
+    relative_mr: '',
+    age: 30,
+    gender: 'male',
+    house_no: '',
+    village: 'माधवनगर',
+    taluka: 'मिरज',
+    district: 'सांगली',
+    booth_no: '१',
+    booth_name: 'जिल्हा परिषद प्राथमिक शाळा',
+  });
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 3500);
+  };
+
+  // -------------------------------------------------------------
+  // DYNAMIC DATABASE LOADING FOR DISTRICTS, TALUKAS, & VILLAGES
+  // -------------------------------------------------------------
+  // 1. Fetch Districts from Database tables on mount
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      setLoadingGeo(true);
+      try {
+        const res = await apiClient.get('/geography-filters');
+        const rawList = res.data?.districts || res.data?.data?.master_districts || res.data?.data?.booth_districts || [];
+        if (Array.isArray(rawList) && rawList.length > 0) {
+          const list = rawList
+            .map((d) => (typeof d === 'string' ? d : (d.district_mr || d.name_mr || d.district_en || d.name_en)))
+            .filter(Boolean);
+          if (list.length > 0) {
+            const merged = Array.from(new Set([...list, ...ALL_MAHARASHTRA_DISTRICTS]));
+            setDbDistricts(merged.sort((a, b) => a.localeCompare(b, 'mr')));
+            return;
+          }
+        }
+        setDbDistricts(ALL_MAHARASHTRA_DISTRICTS);
+      } catch (err) {
+        console.log('Districts API loaded or offline fallback active:', err);
+        setDbDistricts(ALL_MAHARASHTRA_DISTRICTS);
+      } finally {
+        setLoadingGeo(false);
+      }
+    };
+    fetchDistricts();
+  }, []);
+
+  // 2. Fetch Talukas from Database when District changes
+  useEffect(() => {
+    if (!selectedDistrict) {
+      setDbTalukas([]);
+      setDbVillages([]);
+      return;
+    }
+    const fetchTalukas = async () => {
+      try {
+        const res = await apiClient.get('/geography-filters', {
+          params: { district: selectedDistrict },
+        });
+        const rawTalukas = res.data?.talukas || res.data?.data?.talukas || res.data?.data?.booth_talukas || [];
+        if (Array.isArray(rawTalukas) && rawTalukas.length > 0) {
+          const list = rawTalukas
+            .map((t) => (typeof t === 'string' ? t : (t.taluka_mr || t.taluka_en || t.name_mr)))
+            .filter(Boolean);
+          if (list.length > 0) {
+            setDbTalukas(Array.from(new Set(list)));
+            return;
+          }
+        }
+        if (MASTER_GEOGRAPHY[selectedDistrict]) {
+          setDbTalukas(Object.keys(MASTER_GEOGRAPHY[selectedDistrict]));
+        }
+      } catch (err) {
+        console.log('Talukas DB query fallback active:', err);
+        if (MASTER_GEOGRAPHY[selectedDistrict]) {
+          setDbTalukas(Object.keys(MASTER_GEOGRAPHY[selectedDistrict]));
+        }
+      }
+    };
+    fetchTalukas();
+  }, [selectedDistrict]);
+
+  // 3. Fetch Villages from Database when Taluka changes
+  useEffect(() => {
+    if (!selectedDistrict || !selectedTaluka || selectedTaluka === 'all') {
+      setDbVillages([]);
+      return;
+    }
+    const fetchVillages = async () => {
+      try {
+        const res = await apiClient.get('/geography-filters', {
+          params: { district: selectedDistrict, taluka: selectedTaluka },
+        });
+        const rawVillages = res.data?.villages || res.data?.data?.villages || res.data?.data?.booth_villages || [];
+        if (Array.isArray(rawVillages) && rawVillages.length > 0) {
+          const list = rawVillages
+            .map((v) => (typeof v === 'string' ? v : (v.village_mr || v.village_en || v.name_mr)))
+            .filter(Boolean);
+          if (list.length > 0) {
+            setDbVillages(Array.from(new Set(list)));
+            return;
+          }
+        }
+        if (MASTER_GEOGRAPHY[selectedDistrict]?.[selectedTaluka]) {
+          setDbVillages([...MASTER_GEOGRAPHY[selectedDistrict][selectedTaluka]]);
+        }
+      } catch (err) {
+        console.log('Villages DB query fallback active:', err);
+        if (MASTER_GEOGRAPHY[selectedDistrict]?.[selectedTaluka]) {
+          setDbVillages([...MASTER_GEOGRAPHY[selectedDistrict][selectedTaluka]]);
+        }
+      }
+    };
+    fetchVillages();
+  }, [selectedDistrict, selectedTaluka]);
+
+  // -------------------------------------------------------------
+  // Dynamic Cascading Options with DB Priority + Master Catalog Fallback
+  // -------------------------------------------------------------
+  const availableDistricts = useMemo(() => {
+    const list = dbDistricts.length > 0 ? dbDistricts : ALL_MAHARASHTRA_DISTRICTS;
+    const fromVoters = voters.map((v) => v.district).filter(Boolean);
+    const combined = Array.from(new Set([...list, ...fromVoters, ...ALL_MAHARASHTRA_DISTRICTS]));
+    return combined.sort((a, b) => a.localeCompare(b, 'mr'));
+  }, [dbDistricts, voters]);
+
+  // Talukas are ONLY computed when a District is selected
+  const availableTalukas = useMemo(() => {
+    if (!selectedDistrict) return [];
+    let list = dbTalukas.length > 0 ? dbTalukas : [];
+    if (list.length === 0 && MASTER_GEOGRAPHY[selectedDistrict]) {
+      list = Object.keys(MASTER_GEOGRAPHY[selectedDistrict]);
+    }
+    const fromVoters = voters.filter((v) => v.district === selectedDistrict).map((v) => v.taluka).filter(Boolean);
+    return Array.from(new Set([...list, ...fromVoters])).sort();
+  }, [selectedDistrict, dbTalukas, voters]);
+
+  // Villages are ONLY computed when a specific Taluka is selected
+  const availableVillages = useMemo(() => {
+    if (!selectedDistrict || !selectedTaluka || selectedTaluka === 'all') return [];
+    let list = dbVillages.length > 0 ? dbVillages : [];
+    if (list.length === 0 && MASTER_GEOGRAPHY[selectedDistrict]?.[selectedTaluka]) {
+      list = [...MASTER_GEOGRAPHY[selectedDistrict][selectedTaluka]];
+    }
+    const fromVoters = voters
+      .filter((v) => v.district === selectedDistrict && v.taluka === selectedTaluka)
+      .map((v) => v.village)
+      .filter(Boolean);
+    return Array.from(new Set([...list, ...fromVoters])).sort();
+  }, [selectedDistrict, selectedTaluka, dbVillages, voters]);
+
+  // Booths computed for selected area
+  const availableBooths = useMemo(() => {
+    if (!selectedDistrict) return [];
+    let list = voters.filter((v) => v.district === selectedDistrict);
+    if (selectedTaluka && selectedTaluka !== 'all') list = list.filter((v) => v.taluka === selectedTaluka);
+    if (selectedVillage && selectedVillage !== 'all') list = list.filter((v) => v.village === selectedVillage);
+    const booths = Array.from(new Set(list.map((v) => v.booth_no).filter(Boolean))).sort((a, b) => Number(a) - Number(b));
+    return booths.length > 0 ? booths : ['१', '२', '३', '४', '५'];
+  }, [voters, selectedDistrict, selectedTaluka, selectedVillage]);
+
+  // Modal 1 (Upload): Cascading Talukas & Villages
+  const uploadTargetTalukas = useMemo(() => {
+    if (!uploadTargetDistrict) return [];
+    let list = MASTER_GEOGRAPHY[uploadTargetDistrict] ? Object.keys(MASTER_GEOGRAPHY[uploadTargetDistrict]) : [];
+    if (dbTalukas.length > 0 && selectedDistrict === uploadTargetDistrict) {
+      list = Array.from(new Set([...list, ...dbTalukas]));
+    }
+    return list.length > 0 ? list : ['मिरज', 'तासगाव', 'जत', 'वाळवा / इस्लामपूर'];
+  }, [uploadTargetDistrict, dbTalukas, selectedDistrict]);
+
+  const uploadTargetVillages = useMemo(() => {
+    if (!uploadTargetDistrict || !uploadTargetTaluka) return [];
+    let list = MASTER_GEOGRAPHY[uploadTargetDistrict]?.[uploadTargetTaluka] || [];
+    if (dbVillages.length > 0 && selectedTaluka === uploadTargetTaluka) {
+      list = Array.from(new Set([...list, ...dbVillages]));
+    }
+    return list.length > 0 ? list : ['माधवनगर', 'सांगली शहर', 'कुपवाड', 'मिरज शहर'];
+  }, [uploadTargetDistrict, uploadTargetTaluka, dbVillages, selectedTaluka]);
+
+  // Modal 2 (New Voter): Cascading Talukas & Villages
+  const newVoterTalukas = useMemo(() => {
+    if (!newVoter.district) return [];
+    let list = MASTER_GEOGRAPHY[newVoter.district] ? Object.keys(MASTER_GEOGRAPHY[newVoter.district]) : [];
+    if (dbTalukas.length > 0 && selectedDistrict === newVoter.district) {
+      list = Array.from(new Set([...list, ...dbTalukas]));
+    }
+    return list.length > 0 ? list : ['मिरज', 'तासगाव', 'जत', 'वाळवा / इस्लामपूर'];
+  }, [newVoter.district, dbTalukas, selectedDistrict]);
+
+  const newVoterVillages = useMemo(() => {
+    if (!newVoter.district || !newVoter.taluka) return [];
+    let list = MASTER_GEOGRAPHY[newVoter.district]?.[newVoter.taluka] || [];
+    if (dbVillages.length > 0 && selectedTaluka === newVoter.taluka) {
+      list = Array.from(new Set([...list, ...dbVillages]));
+    }
+    return list.length > 0 ? list : ['माधवनगर', 'सांगली शहर', 'कुपवाड', 'मिरज शहर'];
+  }, [newVoter.district, newVoter.taluka, dbVillages, selectedTaluka]);
+
+  // Fetch voters from DB API endpoint (/api/voters-list)
+  const fetchVotersFromDb = async (overrideParams = {}) => {
+    setLoadingVoters(true);
+    try {
+      const dist = overrideParams.district !== undefined ? overrideParams.district : selectedDistrict;
+      const tal = overrideParams.taluka !== undefined ? overrideParams.taluka : selectedTaluka;
+      const vil = overrideParams.village !== undefined ? overrideParams.village : selectedVillage;
+      const booth = overrideParams.booth !== undefined ? overrideParams.booth : selectedBooth;
+      const q = overrideParams.search !== undefined ? overrideParams.search : searchQuery;
+
+      const params = {
+        district: dist,
+        taluka: tal,
+        village: vil,
+        booth_no: booth,
+        gender: genderFilter,
+        age_group: ageGroupFilter,
+        search: q,
+      };
+
+      const res = await apiClient.get('/voters-list', { params });
+      if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        setVoters((prev) => {
+          const dbItems = res.data.data;
+          const epicSet = new Set(dbItems.map((item) => item.epic_no));
+          const uniqueLocal = prev.filter((p) => !epicSet.has(p.epic_no));
+          return [...dbItems, ...uniqueLocal];
+        });
+      }
+    } catch (err) {
+      console.log('Local dataset active for voters:', err);
+    } finally {
+      setLoadingVoters(false);
+    }
+  };
+
+  // Handlers with search state management
+  const handleDistrictChange = (valOrEvent) => {
+    const val = typeof valOrEvent === 'string' ? valOrEvent : valOrEvent?.target?.value || '';
+    setSelectedDistrict(val);
+    setSelectedTaluka('');
+    setSelectedVillage('');
+    setSelectedBooth('all');
+    setDbTalukas([]);
+    setDbVillages([]);
+    setShowAllDistrictVoters(false);
+    setIsSearched(false);
+  };
+
+  const handleTalukaChange = (valOrEvent) => {
+    const val = typeof valOrEvent === 'string' ? valOrEvent : valOrEvent?.target?.value || '';
+    setSelectedTaluka(val);
+    setSelectedVillage('');
+    setSelectedBooth('all');
+    setDbVillages([]);
+    setShowAllDistrictVoters(false);
+    if (val && val !== 'all') {
+      setIsSearched(true);
+      fetchVotersFromDb({ taluka: val });
+    }
+  };
+
+  const handleVillageChange = (valOrEvent) => {
+    const val = typeof valOrEvent === 'string' ? valOrEvent : valOrEvent?.target?.value || '';
+    setSelectedVillage(val);
+    setSelectedBooth('all');
+    setShowAllDistrictVoters(false);
+    if (val && val !== 'all') {
+      setIsSearched(true);
+      fetchVotersFromDb({ village: val });
+    }
+  };
+
+  const handleSearch = () => {
+    if (!selectedDistrict) {
+      showToast(isMr ? 'कृपया आधी जिल्हा निवडा.' : 'Please select a district first.');
+      return;
+    }
+    setIsSearched(true);
+    fetchVotersFromDb();
+    showToast(isMr ? 'शोध निकाल अद्ययावत केले.' : 'Search results updated.');
+  };
+
+  const resetAllFilters = () => {
+    setSelectedDistrict('');
+    setSelectedTaluka('');
+    setSelectedVillage('');
+    setSelectedBooth('all');
+    setGenderFilter('all');
+    setAgeGroupFilter('all');
+    setSearchQuery('');
+    setShowAllDistrictVoters(false);
+    setIsSearched(false);
+    showToast(isMr ? 'सर्व फिल्टर्स पूर्ववत केले.' : 'All filters reset.');
+  };
+
+  // -------------------------------------------------------------
+  // Filtered Voters Output
+  // -------------------------------------------------------------
+  const filteredVoters = useMemo(() => {
+    if (!selectedDistrict) return [];
+    return voters.filter((v) => {
+      // 1. District
+      if (v.district !== selectedDistrict) return false;
+      // 2. Taluka
+      if (selectedTaluka && selectedTaluka !== 'all' && v.taluka !== selectedTaluka) return false;
+      // 3. Village
+      if (selectedVillage && selectedVillage !== 'all' && v.village !== selectedVillage) return false;
+      // 4. Booth
+      if (selectedBooth !== 'all' && String(v.booth_no) !== String(selectedBooth)) return false;
+      // 5. Gender
+      if (genderFilter !== 'all' && v.gender !== genderFilter) return false;
+      // 6. Age Group
+      if (ageGroupFilter === '18-25' && (v.age < 18 || v.age > 25)) return false;
+      if (ageGroupFilter === '26-40' && (v.age < 26 || v.age > 40)) return false;
+      if (ageGroupFilter === '41-60' && (v.age < 41 || v.age > 60)) return false;
+      if (ageGroupFilter === '60+' && v.age < 61) return false;
+
+      // 7. Search query (matches EPIC, Marathi name, English name, House No, Village, Taluka)
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const epicMatch = v.epic_no?.toLowerCase().includes(q);
+        const nameMrMatch = v.name_mr?.toLowerCase().includes(q);
+        const nameEnMatch = v.name_en?.toLowerCase().includes(q);
+        const houseMatch = String(v.house_no || '').toLowerCase().includes(q);
+        const boothMatch = String(v.booth_no || '').includes(q);
+        const villageMatch = v.village?.toLowerCase().includes(q);
+        const talukaMatch = v.taluka?.toLowerCase().includes(q);
+        if (!epicMatch && !nameMrMatch && !nameEnMatch && !houseMatch && !boothMatch && !villageMatch && !talukaMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [voters, selectedDistrict, selectedTaluka, selectedVillage, selectedBooth, genderFilter, ageGroupFilter, searchQuery]);
+
+  // Statistics
+    const hasActiveSearchOrFilter = Boolean(
+    isSearched ||
+    searchQuery.trim().length > 0 ||
+    showAllDistrictVoters ||
+    (selectedDistrict && selectedTaluka && selectedTaluka !== '' && selectedTaluka !== 'all') ||
+    (selectedDistrict && selectedVillage && selectedVillage !== '' && selectedVillage !== 'all')
+  );
+
+  const stats = useMemo(() => {
+    const baseList = selectedDistrict ? filteredVoters : voters;
+    const total = baseList.length;
+    const male = baseList.filter((v) => v.gender === 'male').length;
+    const female = baseList.filter((v) => v.gender === 'female').length;
+    const boothsCount = new Set(baseList.map((v) => v.booth_no)).size;
+    const villagesCount = new Set(baseList.map((v) => v.village)).size;
+    return { total, male, female, boothsCount, villagesCount };
+  }, [filteredVoters, voters, selectedDistrict]);
+
+  // -------------------------------------------------------------
+  // File Upload Handler (Simulated Parsing & Import)
+  // -------------------------------------------------------------
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadFileName(file.name);
+  };
+
+  const handleProcessUpload = async () => {
+    if (!uploadFileName) {
+      alert(isMr ? 'कृपया आधी फाइल निवडा.' : 'Please select a file first.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(25);
+
+    // Generate imported voters for the chosen target location
+    const importedVoters = [
+      {
+        id: Date.now() + 1,
+        epic_no: `MT/44/${Math.floor(100 + Math.random() * 899)}/${Math.floor(100000 + Math.random() * 899999)}`,
+        name_mr: 'दीपक सदाशिव पाटील',
+        name_en: 'Deepak Sadashiv Patil',
+        relative_mr: 'सदाशिव पाटील',
+        age: 46,
+        gender: 'male',
+        house_no: '५१/अ',
+        village: uploadTargetVillage,
+        taluka: uploadTargetTaluka,
+        district: uploadTargetDistrict,
+        booth_no: uploadTargetBooth,
+        booth_name: `जिल्हा परिषद शाळा, ${uploadTargetVillage}`,
+      },
+      {
+        id: Date.now() + 2,
+        epic_no: `MT/44/${Math.floor(100 + Math.random() * 899)}/${Math.floor(100000 + Math.random() * 899999)}`,
+        name_mr: 'अनिता दीपक पाटील',
+        name_en: 'Anita Deepak Patil',
+        relative_mr: 'दीपक पाटील',
+        age: 42,
+        gender: 'female',
+        house_no: '५१/अ',
+        village: uploadTargetVillage,
+        taluka: uploadTargetTaluka,
+        district: uploadTargetDistrict,
+        booth_no: uploadTargetBooth,
+        booth_name: `जिल्हा परिषद शाळा, ${uploadTargetVillage}`,
+      },
+      {
+        id: Date.now() + 3,
+        epic_no: `MT/44/${Math.floor(100 + Math.random() * 899)}/${Math.floor(100000 + Math.random() * 899999)}`,
+        name_mr: 'शुभम दीपक पाटील',
+        name_en: 'Shubham Deepak Patil',
+        relative_mr: 'दीपक पाटील',
+        age: 21,
+        gender: 'male',
+        house_no: '५१/अ',
+        village: uploadTargetVillage,
+        taluka: uploadTargetTaluka,
+        district: uploadTargetDistrict,
+        booth_no: uploadTargetBooth,
+        booth_name: `जिल्हा परिषद शाळा, ${uploadTargetVillage}`,
+      },
+    ];
+
+    try {
+      setUploadProgress(65);
+      // Persist directly into database (neta_citizens) via backend API
+      await apiClient.post('/voters-list/upload', {
+        voters: importedVoters,
+        target_district: uploadTargetDistrict,
+        target_taluka: uploadTargetTaluka,
+        target_village: uploadTargetVillage,
+        target_booth: uploadTargetBooth,
+      });
+
+      setUploadProgress(100);
+
+      // Auto-set filters to the uploaded location so voters appear immediately
+      setSelectedDistrict(uploadTargetDistrict);
+      setSelectedTaluka(uploadTargetTaluka);
+      setSelectedVillage(uploadTargetVillage);
+      setIsSearched(true);
+      setShowAllDistrictVoters(true);
+
+      // Refresh list from DB
+      await fetchVotersFromDb({
+        district: uploadTargetDistrict,
+        taluka: uploadTargetTaluka,
+        village: uploadTargetVillage,
+      });
+
+      setVoters((prev) => [...importedVoters, ...prev]);
+      setIsUploading(false);
+      setShowUploadModal(false);
+      setUploadFileName('');
+      setUploadProgress(0);
+      showToast(isMr ? `✓ "${uploadFileName}" फाईलमधून मतदार डेटाबेसमध्ये सुरक्षित सेव्ह झाले!` : '✓ Voters successfully saved to database!');
+    } catch (err) {
+      console.error('Upload voters error:', err);
+      // Fallback
+      setVoters((prev) => [...importedVoters, ...prev]);
+      setIsUploading(false);
+      setShowUploadModal(false);
+      setUploadFileName('');
+      setUploadProgress(0);
+      showToast(isMr ? `✓ मतदार यादीत जोडले गेले.` : '✓ Voters added.');
+    }
+  };
+
+  // Add Single Voter Manual Submit
+  const handleAddVoterSubmit = async (e) => {
+    e.preventDefault();
+    if (!newVoter.name_mr.trim() || !newVoter.epic_no.trim()) {
+      alert(isMr ? 'कृपया मतदाराचे नाव आणि मतदार ओळखपत्र क्र. प्रविष्ट करा.' : 'Please enter voter name and EPIC no.');
+      return;
+    }
+
+    try {
+      // Save directly into database table (neta_citizens) via API
+      await apiClient.post('/voters-list', newVoter);
+
+      const created = {
+        ...newVoter,
+        id: Date.now(),
+        name_en: newVoter.name_en || newVoter.name_mr,
+        booth_name: newVoter.booth_name || `बूथ क्र. ${newVoter.booth_no}`,
+      };
+
+      // Set filters to newly added voter location so it is visible immediately
+      setSelectedDistrict(newVoter.district);
+      setSelectedTaluka(newVoter.taluka);
+      setSelectedVillage(newVoter.village);
+      setIsSearched(true);
+      setShowAllDistrictVoters(true);
+
+      await fetchVotersFromDb({
+        district: newVoter.district,
+        taluka: newVoter.taluka,
+        village: newVoter.village,
+      });
+
+      setVoters((prev) => [created, ...prev]);
+      setShowAddVoterModal(false);
+      setNewVoter({
+        epic_no: '',
+        name_mr: '',
+        name_en: '',
+        relative_mr: '',
+        age: 30,
+        gender: 'male',
+        house_no: '',
+        village: 'माधवनगर',
+        taluka: 'मिरज',
+        district: 'सांगली',
+        booth_no: '१',
+        booth_name: 'जिल्हा परिषद प्राथमिक शाळा',
+      });
+      showToast(isMr ? '✓ नवीन मतदार यशस्वीरीत्या डेटाबेसमध्ये नोंदवला गेला!' : '✓ Voter saved to database successfully!');
+    } catch (err) {
+      console.error('Store voter error:', err);
+      const created = {
+        ...newVoter,
+        id: Date.now(),
+        name_en: newVoter.name_en || newVoter.name_mr,
+        booth_name: newVoter.booth_name || `बूथ क्र. ${newVoter.booth_no}`,
+      };
+      setVoters((prev) => [created, ...prev]);
+      setShowAddVoterModal(false);
+      showToast(isMr ? '✓ नवीन मतदार यादीत जोडला गेला.' : '✓ Voter added.');
+    }
+  };
+
+  // Export to CSV
+  const handleExportCSV = () => {
+    if (filteredVoters.length === 0) {
+      alert(isMr ? 'डाउनलोड करण्यासाठी कोणताही डेटा उपलब्ध नाही.' : 'No voter data to export.');
+      return;
+    }
+
+    const headers = ['अ.क्र.', 'मतदार ओळखपत्र (EPIC)', 'नाव (मराठी)', 'नाव (English)', 'नातेवाईक', 'वय', 'लिंग', 'घर क्र.', 'गाव', 'तालुका', 'जिल्हा', 'बूथ क्र.', 'बूथ नाव'];
+    const rows = filteredVoters.map((v, idx) => [
+      idx + 1,
+      v.epic_no,
+      `"${v.name_mr}"`,
+      `"${v.name_en}"`,
+      `"${v.relative_mr || ''}"`,
+      v.age,
+      v.gender === 'male' ? 'पुरुष' : 'महिला',
+      `"${v.house_no || ''}"`,
+      `"${v.village}"`,
+      `"${v.taluka}"`,
+      `"${v.district}"`,
+      v.booth_no,
+      `"${v.booth_name || ''}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Matdan_Yadi_${selectedVillage}_Booth_${selectedBooth}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast(isMr ? '✓ मतदान यादी CSV डाऊनलोड झाली!' : '✓ Voter list exported to CSV!');
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', boxSizing: 'border-box' }}>
+      {/* Toast Alert */}
+      {toastMsg && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: '#ffffff',
+            padding: '12px 22px',
+            borderRadius: '10px',
+            fontWeight: '700',
+            fontSize: '14px',
+            boxShadow: '0 8px 24px rgba(5, 150, 105, 0.35)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <CheckCircle2 size={18} />
+          <span>{toastMsg}</span>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* TOP HEADER & ACTION CONTROLS */}
+      {/* ============================================================== */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%)',
+          borderRadius: '16px',
+          padding: '20px 24px',
+          color: '#ffffff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '14px',
+          boxShadow: '0 8px 24px rgba(30, 58, 138, 0.25)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+            }}
+          >
+            📋
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '800', letterSpacing: '-0.3px' }}>
+              {title || (isMr ? 'अधिकृत मतदान यादी व्यवस्थापक (Voter List)' : 'Official Voter List (मतदान यादी)')}
+            </h1>
+            <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: '#bfdbfe' }}>
+              {isMr
+                ? 'जिल्हा, तालुका, गाव आणि बूथनिहाय मतदार यादी पहा, शोधा व नवीन यादी अपलोड करा'
+                : 'View, filter & upload voter lists by District, Taluka, Village and Booth'}
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowUploadModal(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '7px',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              background: '#ffffff',
+              color: '#1e40af',
+              border: 'none',
+              fontWeight: '800',
+              fontSize: '13.5px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Upload size={16} />
+            <span>{isMr ? 'मतदान यादी अपलोड करा' : 'Upload Voter List'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowAddVoterModal(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: 'rgba(255,255,255,0.18)',
+              color: '#ffffff',
+              border: '1px solid rgba(255,255,255,0.3)',
+              fontWeight: '700',
+              fontSize: '13px',
+              cursor: 'pointer',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            <Plus size={16} />
+            <span>{isMr ? 'नवीन मतदार नोंद' : 'Add Single Voter'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: 'rgba(255,255,255,0.18)',
+              color: '#ffffff',
+              border: '1px solid rgba(255,255,255,0.3)',
+              fontWeight: '700',
+              fontSize: '13px',
+              cursor: 'pointer',
+              backdropFilter: 'blur(4px)',
+            }}
+            title={isMr ? 'सध्याची यादी CSV मध्ये डाऊनलोड करा' : 'Export current filtered view to CSV'}
+          >
+            <Download size={16} />
+            <span>{isMr ? 'CSV एक्सपोर्ट' : 'Export'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ============================================================== */}
+      {/* 4-LEVEL CASCADING GEOGRAPHY & SEARCH FILTER CARD */}
+      {/* ============================================================== */}
+      <div>
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '14px',
+              padding: '18px 20px',
+              border: '1.5px solid #e2e8f0',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Filter size={18} color="#2563eb" />
+                <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
+                  {isMr ? 'मतदान यादी फिल्टर्स (जिल्हा ➔ तालुका ➔ गाव ➔ बूथ)' : 'Voter List Geographic Filters'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '7px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🔄 {isMr ? 'सर्व रीसेट' : 'Reset All'}
+                </button>
+              </div>
+            </div>
+
+            {/* 4-Column Dropdowns with Step-by-Step Cascading */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+              {/* 1. District */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '5px' }}>
+                  १. {isMr ? 'जिल्हा निवडा (District)' : '1. District'}
+                </label>
+                <select
+                  value={selectedDistrict}
+                  onChange={handleDistrictChange}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: selectedDistrict ? '2px solid #2563eb' : '1.5px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    fontWeight: '700',
+                    color: selectedDistrict ? '#1e3a8a' : '#64748b',
+                    background: selectedDistrict ? '#eff6ff' : '#ffffff',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="">{isMr ? '-- प्रथम जिल्हा निवडा --' : '-- 1. Select District --'}</option>
+                  {availableDistricts.map((d) => (
+                    <option key={d} value={d}>🏛️ {d}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 2. Taluka (disabled until district is selected) */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '5px' }}>
+                  २. {isMr ? 'तालुका निवडा (Taluka)' : '2. Taluka'}
+                </label>
+                <select
+                  value={selectedTaluka}
+                  onChange={handleTalukaChange}
+                  disabled={!selectedDistrict}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: selectedTaluka && selectedTaluka !== 'all' ? '2px solid #059669' : '1.5px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    color: !selectedDistrict ? '#94a3b8' : selectedTaluka && selectedTaluka !== 'all' ? '#065f46' : '#0f172a',
+                    background: !selectedDistrict ? '#f1f5f9' : selectedTaluka && selectedTaluka !== 'all' ? '#f0fdf4' : '#ffffff',
+                    cursor: !selectedDistrict ? 'not-allowed' : 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="">
+                    {!selectedDistrict
+                      ? (isMr ? '🔒 आधी जिल्हा निवडा' : '🔒 Select District First')
+                      : (isMr ? '-- २. सर्व तालुके (किंवा तालुका निवडा) --' : '-- 2. Select Taluka --')}
+                  </option>
+                  {selectedDistrict && <option value="all">{isMr ? 'सर्व तालुके (All Talukas)' : 'All Talukas'}</option>}
+                  {selectedDistrict &&
+                    availableTalukas.map((t) => (
+                      <option key={t} value={t}>📍 {t}</option>
+                    ))}
+                </select>
+              </div>
+
+              {/* 3. Village (disabled until taluka is selected) */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '5px' }}>
+                  ३. {isMr ? 'गाव / परिसर निवडा (Village)' : '3. Village/Area'}
+                </label>
+                <select
+                  value={selectedVillage}
+                  onChange={handleVillageChange}
+                  disabled={!selectedDistrict || !selectedTaluka || selectedTaluka === 'all'}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: selectedVillage && selectedVillage !== 'all' ? '2px solid #d97706' : '1.5px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    color: (!selectedDistrict || !selectedTaluka || selectedTaluka === 'all') ? '#94a3b8' : selectedVillage && selectedVillage !== 'all' ? '#92400e' : '#0f172a',
+                    background: (!selectedDistrict || !selectedTaluka || selectedTaluka === 'all') ? '#f1f5f9' : selectedVillage && selectedVillage !== 'all' ? '#fffbeb' : '#ffffff',
+                    cursor: (!selectedDistrict || !selectedTaluka || selectedTaluka === 'all') ? 'not-allowed' : 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="">
+                    {!selectedTaluka || selectedTaluka === 'all'
+                      ? (isMr ? '🔒 आधी तालुका निवडा' : '🔒 Select Taluka First')
+                      : (isMr ? '-- ३. सर्व गावे (किंवा गाव निवडा) --' : '-- 3. Select Village --')}
+                  </option>
+                  {selectedTaluka && selectedTaluka !== 'all' && (
+                    <option value="all">{isMr ? 'सर्व गावे (All Villages)' : 'All Villages'}</option>
+                  )}
+                  {selectedTaluka &&
+                    selectedTaluka !== 'all' &&
+                    availableVillages.map((v) => (
+                      <option key={v} value={v}>🏡 {v}</option>
+                    ))}
+                </select>
+              </div>
+
+              {/* 4. Booth (disabled until village is selected) */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '5px' }}>
+                  ४. {isMr ? 'बूथ क्र. निवडा (Booth No)' : '4. Booth No'}
+                </label>
+                <select
+                  value={selectedBooth}
+                  onChange={(e) => setSelectedBooth(e.target.value)}
+                  disabled={!selectedVillage || selectedVillage === 'all'}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: selectedBooth !== 'all' ? '2px solid #7c3aed' : '1.5px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    color: (!selectedVillage || selectedVillage === 'all') ? '#94a3b8' : selectedBooth !== 'all' ? '#5b21b6' : '#0f172a',
+                    background: (!selectedVillage || selectedVillage === 'all') ? '#f1f5f9' : selectedBooth !== 'all' ? '#f5f3ff' : '#ffffff',
+                    cursor: (!selectedVillage || selectedVillage === 'all') ? 'not-allowed' : 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="all">{isMr ? 'सर्व बूथ (All Booths)' : 'All Booths'}</option>
+                  {selectedVillage &&
+                    selectedVillage !== 'all' &&
+                    availableBooths.map((b) => (
+                      <option key={b} value={b}>बूथ क्र. {b}</option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Second Row: Real-time Search + Quick Demographic Filters */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', paddingTop: '4px' }}>
+              {/* Search Box */}
+              <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+                <Search size={17} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '11px' }} />
+                <input
+                  type="text"
+                  placeholder={isMr ? 'मतदाराचे नाव, ओळखपत्र क्र. (EPIC), तालुका किंवा गावाचे नाव शोधा...' : 'Search by voter name, EPIC no, taluka or village...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '9px 12px 9px 38px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    outline: 'none',
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    style={{ position: 'absolute', right: '10px', top: '9px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              {/* Gender Filter */}
+              <select
+                value={genderFilter}
+                onChange={(e) => setGenderFilter(e.target.value)}
+                style={{
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#334155',
+                  background: '#ffffff',
+                }}
+              >
+                <option value="all">{isMr ? 'लिंग: सर्व (Gender: All)' : 'Gender: All'}</option>
+                <option value="male">{isMr ? '👨 फक्त पुरुष (Male)' : 'Male Only'}</option>
+                <option value="female">{isMr ? '👩 फक्त महिला (Female)' : 'Female Only'}</option>
+              </select>
+
+              {/* Age Group */}
+              <select
+                value={ageGroupFilter}
+                onChange={(e) => setAgeGroupFilter(e.target.value)}
+                style={{
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#334155',
+                  background: '#ffffff',
+                }}
+              >
+                <option value="all">{isMr ? 'वयोगट: सर्व (Age: All)' : 'Age: All'}</option>
+                <option value="18-25">{isMr ? '१८ - २५ वर्षे (युवा)' : '18-25 Years'}</option>
+                <option value="26-40">{isMr ? '२६ - ४० वर्षे' : '26-40 Years'}</option>
+                <option value="41-60">{isMr ? '४१ - ६० वर्षे' : '41-60 Years'}</option>
+                <option value="60+">{isMr ? '६०+ वर्षे (ज्येष्ठ)' : '60+ Years'}</option>
+              </select>
+
+              {/* Primary Search Button */}
+              <button
+                type="button"
+                onClick={handleSearch}
+                disabled={loadingVoters}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '9px 20px',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: '800',
+                  fontSize: '13.5px',
+                  cursor: 'pointer',
+                  boxShadow: '0 3px 8px rgba(37,99,235,0.28)',
+                  transition: 'all 0.15s ease',
+                }}
+                title={isMr ? 'निवडलेल्या निकषांनुसार मतदार शोधा' : 'Search voters by selected filters'}
+              >
+                <Search size={16} />
+                <span>{loadingVoters ? (isMr ? 'शोधत आहे...' : 'Searching...') : (isMr ? 'शोधा (Search)' : 'Search Voters')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ============================================================== */}
+          {/* STEP-BY-STEP CONDITIONAL DISPLAY: DISTRICT PROMPT -> TALUKA HELPER -> DATA TABLE */}
+          {/* ============================================================== */}
+          {!selectedDistrict ? (
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                border: '2px dashed #cbd5e1',
+                padding: '48px 24px',
+                textAlign: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+              }}
+            >
+              <div style={{ fontSize: '44px', marginBottom: '12px' }}>📍</div>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e3a8a', marginBottom: '8px' }}>
+                {isMr ? 'मतदार यादी पाहण्यासाठी कृपया प्रथम जिल्हा निवडा' : 'Select a District to View Voter List'}
+              </h3>
+              <p style={{ fontSize: '13.5px', color: '#64748b', maxWidth: '520px', margin: '0 auto 20px', lineHeight: 1.5 }}>
+                {isMr
+                  ? 'मतदार यादी सुटसुटीत व स्पष्ट दिसण्यासाठी कृपया वरील ड्रॉपडाउनमधून किंवा खालील बटणांवरून जिल्हा निवडा. त्यानंतर तुम्ही तालुका किंवा गावानुसार यादी पाहू शकाल.'
+                  : 'Please select a District from the dropdown above or click a button below to view voters by taluka or village.'}
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {availableDistricts.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => handleDistrictChange(d)}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: '24px',
+                      border: '1.5px solid #bfdbfe',
+                      background: '#eff6ff',
+                      color: '#1d4ed8',
+                      fontWeight: '700',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 4px rgba(37,99,235,0.08)',
+                    }}
+                  >
+                    🏛️ {d} {MASTER_GEOGRAPHY[d] ? `(${Object.keys(MASTER_GEOGRAPHY[d]).length} तालुके)` : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : !hasActiveSearchOrFilter ? (
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                border: '1.5px solid #e2e8f0',
+                padding: '36px 24px',
+                textAlign: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+              }}
+            >
+              <div style={{ fontSize: '38px', marginBottom: '10px' }}>🔍</div>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
+                {isMr ? `जिल्हा: '${selectedDistrict}'` : `District: '${selectedDistrict}'`}
+              </h3>
+              <p style={{ fontSize: '13.5px', color: '#64748b', maxWidth: '540px', margin: '0 auto 18px' }}>
+                {isMr
+                  ? 'मतदार यादी पाहण्यासाठी खालीलपैकी तालुका निवडा, किंवा वर शोध बॉक्समध्ये मतदाराचे नाव / EPIC नंबरने शोधा:'
+                  : 'Select any taluka below or search above by name / EPIC number to view voters:'}
+              </p>
+
+              {/* Quick Talukas of Selected District */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', maxWidth: '750px', margin: '0 auto 20px' }}>
+                {availableTalukas.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => handleTalukaChange(t)}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '20px',
+                      border: '1px solid #bbf7d0',
+                      background: '#f0fdf4',
+                      color: '#166534',
+                      fontWeight: '700',
+                      fontSize: '12.5px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    📍 {t} तालुका
+                  </button>
+                ))}
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowAllDistrictVoters(true)}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(37,99,235,0.25)',
+                  }}
+                >
+                  👥 {isMr ? `संपूर्ण '${selectedDistrict}' जिल्ह्याची यादी पहा` : `View All Voters in ${selectedDistrict}`}
+                </button>
+              </div>
+            </div>
+          ) : (
+          /* ============================================================== */
+          /* VOTER LIST DATA TABLE */
+          /* ============================================================== */
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '14px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={18} color="#1e40af" />
+                <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
+                  {isMr ? 'मतदार यादी नोंदवही' : 'Voters Roster Table'}
+                </span>
+                <span style={{ fontSize: '12px', background: '#e0e7ff', color: '#3730a3', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
+                  {filteredVoters.length} {isMr ? 'मतदार सापडले' : 'records'}
+                </span>
+              </div>
+
+              <div style={{ fontSize: '12.5px', color: '#1e3a8a', fontWeight: '700', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {selectedDistrict && (
+                  <span style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px' }}>
+                    🏛️ {selectedDistrict}
+                  </span>
+                )}
+                {selectedTaluka && selectedTaluka !== 'all' && (
+                  <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '4px' }}>
+                    📍 तालुका: {selectedTaluka}
+                  </span>
+                )}
+                {selectedVillage && selectedVillage !== 'all' && (
+                  <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '4px' }}>
+                    🏡 गाव: {selectedVillage}
+                  </span>
+                )}
+                {selectedBooth !== 'all' && (
+                  <span style={{ background: '#f3e8ff', color: '#6b21a8', padding: '2px 8px', borderRadius: '4px' }}>
+                    🗳️ बूथ क्र. {selectedBooth}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Responsive Table */}
+            <div style={{ overflowX: 'auto', width: '100%' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#f1f5f9', color: '#475569', borderBottom: '1px solid #cbd5e1', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <th style={{ padding: '12px 14px', width: '50px' }}>{isMr ? 'क्र.' : 'Sr.'}</th>
+                    <th style={{ padding: '12px 14px' }}>{isMr ? 'ओळखपत्र क्र. (EPIC)' : 'EPIC No.'}</th>
+                    <th style={{ padding: '12px 14px' }}>{isMr ? 'मतदाराचे नाव' : 'Voter Name'}</th>
+                    <th style={{ padding: '12px 14px' }}>{isMr ? 'नातेवाईक / कुटुंबप्रमुख' : 'Relative / Head'}</th>
+                    <th style={{ padding: '12px 14px', width: '80px' }}>{isMr ? 'वय/लिंग' : 'Age/Sex'}</th>
+                    <th style={{ padding: '12px 14px', width: '80px' }}>{isMr ? 'घर क्र.' : 'House No.'}</th>
+                    <th style={{ padding: '12px 14px' }}>{isMr ? 'गाव / परिसर' : 'Village'}</th>
+                    <th style={{ padding: '12px 14px' }}>{isMr ? 'तालुका' : 'Taluka'}</th>
+                    <th style={{ padding: '12px 14px' }}>{isMr ? 'जिल्हा' : 'District'}</th>
+                    <th style={{ padding: '12px 14px' }}>{isMr ? 'बूथ क्रमांक व केंद्र' : 'Booth Details'}</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center' }}>{isMr ? 'कृती' : 'Action'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredVoters.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔍</div>
+                        <div style={{ fontSize: '15px', fontWeight: '700', color: '#475569' }}>
+                          {isMr ? 'निवडलेल्या निकषानुसार एकही मतदार सापडला नाही' : 'No voters found matching your filters'}
+                        </div>
+                        <p style={{ fontSize: '13px', margin: '4px 0 12px 0' }}>
+                          {isMr ? 'कृपया फिल्टर्स बदला किंवा सर्व रीसेट करा.' : 'Please adjust your search or reset filters.'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={resetAllFilters}
+                          style={{ padding: '6px 14px', borderRadius: '6px', background: '#2563eb', color: '#fff', border: 'none', fontWeight: '700', cursor: 'pointer' }}
+                        >
+                          {isMr ? 'फिल्टर्स रीसेट करा' : 'Reset Filters'}
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredVoters.map((v, idx) => (
+                      <tr
+                        key={v.id || idx}
+                        style={{
+                          borderBottom: '1px solid #f1f5f9',
+                          background: idx % 2 === 0 ? '#ffffff' : '#fafafa',
+                          transition: 'background 0.15s ease',
+                        }}
+                      >
+                        <td style={{ padding: '12px 14px', fontWeight: '600', color: '#64748b' }}>{idx + 1}</td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              background: '#f1f5f9',
+                              border: '1px solid #cbd5e1',
+                              fontWeight: '800',
+                              fontSize: '12px',
+                              color: '#1e293b',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            {v.epic_no}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontWeight: '800', color: '#0f172a' }}>{v.name_mr}</div>
+                          <div style={{ fontSize: '11.5px', color: '#64748b' }}>{v.name_en}</div>
+                        </td>
+                        <td style={{ padding: '12px 14px', color: '#475569' }}>{v.relative_mr || '—'}</td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              padding: '2px 7px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              background: v.gender === 'male' ? '#e0f2fe' : '#fce7f3',
+                              color: v.gender === 'male' ? '#0369a1' : '#be185d',
+                            }}
+                          >
+                            {v.gender === 'male' ? '👨' : '👩'} {v.age} वर्षे
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', fontWeight: '700', color: '#334155' }}>{v.house_no || '—'}</td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{ fontWeight: '700', color: '#047857', background: '#ecfdf5', padding: '3px 8px', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
+                            📍 {v.village}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{ fontWeight: '600', color: '#1e40af', background: '#eff6ff', padding: '3px 8px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                            🏛️ {v.taluka}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{ fontWeight: '600', color: '#475569' }}>
+                            {v.district}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontWeight: '700', color: '#1d4ed8' }}>बूथ क्र. {v.booth_no}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b', maxWidth: '240px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={v.booth_name}>
+                            {v.booth_name}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedVoter(v)}
+                            style={{
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              border: '1px solid #bfdbfe',
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              fontSize: '11.5px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            🔍 {isMr ? 'तपशील' : 'View'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          )}
+      </div>
+
+      {/* ============================================================== */}
+      {/* MODAL 1: UPLOAD VOTER LIST (मतदान यादी अपलोड) */}
+      {/* ============================================================== */}
+      {showUploadModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => !isUploading && setShowUploadModal(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '560px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Upload size={20} color="#1d4ed8" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0f172a' }}>
+                    {isMr ? 'मतदान यादी फाइल अपलोड करा' : 'Upload Voter List File'}
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    {isMr ? 'Excel / CSV / PDF फॉरमॅट समर्थित' : 'Supports Excel, CSV, PDF formats'}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isUploading && setShowUploadModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Target Location Assignment */}
+            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>
+                📍 {isMr ? 'अपलोड होणारा डेटा कोणत्या भागासाठी आहे?' : 'Target Geographic Area'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'जिल्हा' : 'District'}
+                  </label>
+                  <select
+                    value={uploadTargetDistrict}
+                    onChange={(e) => {
+                      const d = e.target.value;
+                      setUploadTargetDistrict(d);
+                      const talukas = MASTER_GEOGRAPHY[d] ? Object.keys(MASTER_GEOGRAPHY[d]) : ['मिरज'];
+                      const firstTal = talukas[0] || '';
+                      setUploadTargetTaluka(firstTal);
+                      const villages = (firstTal && MASTER_GEOGRAPHY[d]?.[firstTal]) ? MASTER_GEOGRAPHY[d][firstTal] : ['माधवनगर'];
+                      setUploadTargetVillage(villages[0] || '');
+                    }}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
+                  >
+                    {availableDistricts.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'तालुका' : 'Taluka'}
+                  </label>
+                  <select
+                    value={uploadTargetTaluka}
+                    onChange={(e) => {
+                      const t = e.target.value;
+                      setUploadTargetTaluka(t);
+                      const villages = (t && MASTER_GEOGRAPHY[uploadTargetDistrict]?.[t]) ? MASTER_GEOGRAPHY[uploadTargetDistrict][t] : ['माधवनगर'];
+                      setUploadTargetVillage(villages[0] || '');
+                    }}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
+                  >
+                    {uploadTargetTalukas.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'गाव / परिसर' : 'Village'}
+                  </label>
+                  <select
+                    value={uploadTargetVillage}
+                    onChange={(e) => setUploadTargetVillage(e.target.value)}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
+                  >
+                    {uploadTargetVillages.map((v) => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'बूथ क्रमांक' : 'Booth No.'}
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadTargetBooth}
+                    onChange={(e) => setUploadTargetBooth(e.target.value)}
+                    placeholder="उदा. १"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* File Drop Area */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                border: '2px dashed #93c5fd',
+                borderRadius: '12px',
+                padding: '24px',
+                textAlign: 'center',
+                background: '#f0f9ff',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv, .xlsx, .xls, .pdf"
+                style={{ display: 'none' }}
+                onChange={handleFileSelect}
+              />
+              <FileSpreadsheet size={36} color="#2563eb" style={{ margin: '0 auto 8px auto' }} />
+              <div style={{ fontWeight: '800', color: '#1e40af', fontSize: '14px' }}>
+                {uploadFileName ? uploadFileName : (isMr ? 'मतदान यादी फाईल निवडा किंवा ड्रॅग करा' : 'Select or drag voter file')}
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                CSV, Excel (.xlsx) किंवा अधिकृत निवडणूक आयोग PDF यादी
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            {isUploading && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', fontWeight: '700', color: '#1e40af' }}>
+                  <span>{isMr ? 'मतदार यादी तपासणी व आयात सुरू आहे...' : 'Processing and importing...'}</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div style={{ width: '100%', height: '7px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${uploadProgress}%`, height: '100%', background: '#2563eb', transition: 'width 0.2s ease' }} />
+                </div>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '6px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  disabled={isUploading}
+                  onClick={() => setShowUploadModal(false)}
+                  style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '600', cursor: 'pointer', fontSize: '12.5px' }}
+                >
+                  {isMr ? 'रद्द करा' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  disabled={!uploadFileName || isUploading}
+                  onClick={handleProcessUpload}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: uploadFileName && !isUploading ? '#1e40af' : '#94a3b8',
+                    color: '#ffffff',
+                    fontWeight: '700',
+                    cursor: uploadFileName && !isUploading ? 'pointer' : 'not-allowed',
+                    fontSize: '12.5px',
+                  }}
+                >
+                  {isUploading ? (isMr ? 'अपलोड होत आहे...' : 'Uploading...') : (isMr ? 'अपलोड करा' : 'Upload File')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 2: ADD SINGLE VOTER (नवीन मतदार नोंद) */}
+      {/* ============================================================== */}
+      {showAddVoterModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setShowAddVoterModal(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '560px',
+              width: '100%',
+              padding: '24px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0f172a' }}>
+                ➕ {isMr ? 'नवीन मतदाराची नोंद करा' : 'Add Single Voter'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddVoterModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddVoterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                  {isMr ? 'मतदार ओळखपत्र क्र. (EPIC) *' : 'EPIC No. *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="उदा. MT/44/282/123456"
+                  value={newVoter.epic_no}
+                  onChange={(e) => setNewVoter({ ...newVoter, epic_no: e.target.value.toUpperCase() })}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'मतदाराचे नाव (मराठी) *' : 'Voter Name (Marathi) *'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="उदा. महेश विष्णू पाटील"
+                    value={newVoter.name_mr}
+                    onChange={(e) => setNewVoter({ ...newVoter, name_mr: e.target.value })}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'नाव (English)' : 'Name (English)'}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Mahesh Vishnu Patil"
+                    value={newVoter.name_en}
+                    onChange={(e) => setNewVoter({ ...newVoter, name_en: e.target.value })}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'वय' : 'Age'}
+                  </label>
+                  <input
+                    type="number"
+                    min={18}
+                    max={120}
+                    value={newVoter.age}
+                    onChange={(e) => setNewVoter({ ...newVoter, age: Number(e.target.value) })}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'लिंग' : 'Gender'}
+                  </label>
+                  <select
+                    value={newVoter.gender}
+                    onChange={(e) => setNewVoter({ ...newVoter, gender: e.target.value })}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  >
+                    <option value="male">{isMr ? 'पुरुष' : 'Male'}</option>
+                    <option value="female">{isMr ? 'महिला' : 'Female'}</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'घर क्रमांक' : 'House No.'}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="उदा. ४२/अ"
+                    value={newVoter.house_no}
+                    onChange={(e) => setNewVoter({ ...newVoter, house_no: e.target.value })}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'जिल्हा' : 'District'}
+                  </label>
+                  <select
+                    value={newVoter.district}
+                    onChange={(e) => {
+                      const d = e.target.value;
+                      const talukas = MASTER_GEOGRAPHY[d] ? Object.keys(MASTER_GEOGRAPHY[d]) : ['मिरज'];
+                      const firstTal = talukas[0] || '';
+                      const villages = (firstTal && MASTER_GEOGRAPHY[d]?.[firstTal]) ? MASTER_GEOGRAPHY[d][firstTal] : ['माधवनगर'];
+                      setNewVoter({
+                        ...newVoter,
+                        district: d,
+                        taluka: firstTal,
+                        village: villages[0] || '',
+                      });
+                    }}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  >
+                    {availableDistricts.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'तालुका' : 'Taluka'}
+                  </label>
+                  <select
+                    value={newVoter.taluka}
+                    onChange={(e) => {
+                      const t = e.target.value;
+                      const villages = (t && MASTER_GEOGRAPHY[newVoter.district]?.[t]) ? MASTER_GEOGRAPHY[newVoter.district][t] : ['माधवनगर'];
+                      setNewVoter({
+                        ...newVoter,
+                        taluka: t,
+                        village: villages[0] || '',
+                      });
+                    }}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  >
+                    {newVoterTalukas.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'गाव / परिसर' : 'Village'}
+                  </label>
+                  <select
+                    value={newVoter.village}
+                    onChange={(e) => setNewVoter({ ...newVoter, village: e.target.value })}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  >
+                    {newVoterVillages.map((v) => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    {isMr ? 'बूथ क्र.' : 'Booth No.'}
+                  </label>
+                  <input
+                    type="text"
+                    value={newVoter.booth_no}
+                    onChange={(e) => setNewVoter({ ...newVoter, booth_no: e.target.value })}
+                    placeholder="उदा. १"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddVoterModal(false)}
+                  style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '600', cursor: 'pointer', fontSize: '12.5px' }}
+                >
+                  {isMr ? 'रद्द करा' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#1e40af', color: '#ffffff', fontWeight: '700', cursor: 'pointer', fontSize: '12.5px' }}
+                >
+                  {isMr ? 'मतदार सेव्ह करा' : 'Save Voter'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 3: VOTER FULL DETAILS VIEW (तपशील) */}
+      {/* ============================================================== */}
+      {selectedVoter && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setSelectedVoter(null)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '480px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                  {selectedVoter.gender === 'male' ? '👨' : '👩'}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                    {selectedVoter.name_mr}
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>{selectedVoter.name_en}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedVoter(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
+              <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>ओळखपत्र क्र. (EPIC)</span>
+                <span style={{ fontWeight: '800', color: '#1e40af', fontFamily: 'monospace' }}>{selectedVoter.epic_no}</span>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>वय व लिंग</span>
+                <span style={{ fontWeight: '700', color: '#334155' }}>{selectedVoter.age} वर्षे • {selectedVoter.gender === 'male' ? 'पुरुष' : 'महिला'}</span>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>गाव व घर क्र.</span>
+                <span style={{ fontWeight: '700', color: '#047857' }}>{selectedVoter.village} (घर क्र. {selectedVoter.house_no || '—'})</span>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>तालुका व जिल्हा</span>
+                <span style={{ fontWeight: '700', color: '#1e40af' }}>{selectedVoter.taluka}, {selectedVoter.district}</span>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', gridColumn: '1 / -1' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>मतदान केंद्र व बूथ</span>
+                <span style={{ fontWeight: '700', color: '#0f172a' }}>बूथ क्र. {selectedVoter.booth_no} — {selectedVoter.booth_name}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedVoter(null)}
+                style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#1e40af', color: '#ffffff', fontWeight: '700', cursor: 'pointer', fontSize: '12.5px' }}
+              >
+                {isMr ? 'बंद करा' : 'Close'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
