@@ -2987,21 +2987,17 @@ function AdminDashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
                   <div
                     style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      background: '#ffffff',
+                      width: '42px',
+                      height: '42px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                      border: '1.5px solid #d4af37',
-                      overflow: 'hidden',
+                      filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25))',
                     }}
-                    title="Intelligence Mechanism"
+                    title="Intelligent MaKanisms"
                   >
-                    <img src="/logo.png" alt="Intelligence Mechanism Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src="/logo.png" alt="Intelligent MaKanisms Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div
@@ -3520,7 +3516,7 @@ function AdminDashboard() {
                 </div>
               ) : (
                 <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <img src="/logo.png" alt="Intelligence Mechanism Logo" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.2px solid #d4af37', flexShrink: 0 }} />
+                  <img src="/logo.png" alt="Intelligent MaKanisms Logo" style={{ width: '38px', height: '38px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.2))', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       Intelligence Mechanism

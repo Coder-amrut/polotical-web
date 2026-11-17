@@ -84,20 +84,16 @@ function Home() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
                 <div
                   style={{
-                    width: '60px',
-                    height: '60px',
-                    borderRadius: '50%',
-                    background: '#ffffff',
-                    border: '2px solid #d4af37',
-                    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)',
-                    overflow: 'hidden',
-                    flexShrink: 0,
+                    width: '68px',
+                    height: '68px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    flexShrink: 0,
+                    filter: 'drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45))',
                   }}
                 >
-                  <img src="/logo.png" alt="Intelligence Mechanism Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src="/logo.png" alt="Intelligent MaKanisms Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
                 <div>
                   <h1 style={{ margin: '0 0 4px 0', fontSize: '28px', fontWeight: '900', letterSpacing: '-0.5px' }}>

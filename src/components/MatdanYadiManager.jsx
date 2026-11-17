@@ -1155,18 +1155,16 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div
             style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: 'rgba(255,255,255,0.2)',
-              backdropFilter: 'blur(8px)',
+              width: '52px',
+              height: '52px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '24px',
+              flexShrink: 0,
+              filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.25))',
             }}
           >
-            📋
+            <img src="/logo.png" alt="Intelligent MaKanisms Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '800', letterSpacing: '-0.3px' }}>

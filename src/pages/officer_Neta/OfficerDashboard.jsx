@@ -838,22 +838,17 @@ export default function OfficerDashboard() {
                 {/* Official Brand Emblem */}
                 <div
                   style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+                    width: '42px',
+                    height: '42px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#ffffff',
                     flexShrink: 0,
-                    border: '1px solid rgba(59, 130, 246, 0.4)',
-                    boxShadow: '0 2px 8px rgba(30, 58, 138, 0.25)',
-                    fontSize: '18px',
+                    filter: 'drop-shadow(0 3px 10px rgba(0, 0, 0, 0.3))',
                   }}
-                  title={isMr ? 'नेता व जनसेवक कक्ष' : 'Political Command HQ'}
+                  title={isMr ? 'इंटेलिजंट मेकॅनिझम्स' : 'Intelligent MaKanisms HQ'}
                 >
-                  🏛️
+                  <img src="/logo.png" alt="Intelligent MaKanisms Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
 
                 {!isCollapsed && (
