@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import apiClient from '../../api/axios';
 
-// Tab configuration starting from Booth hierarchy as requested
+// Tab configuration starting from Booth hierarchy
 const HIERARCHY_TABS = [
   { id: 'booth_karyakarta', label_mr: '१. बूथ कार्यकर्ता', label_en: '1. Booth Karyakarta', icon: '👤', color: '#2563eb' },
   { id: 'booth_pramukh', label_mr: '२. बूथ प्रमुख', label_en: '2. Booth Pramukh', icon: '🎖️', color: '#16a34a' },
@@ -9,7 +9,7 @@ const HIERARCHY_TABS = [
   { id: 'taluka_pramukh', label_mr: '४. तालुका प्रमुख', label_en: '4. Taluka Pramukh', icon: '🏛️', color: '#9333ea' },
   { id: 'jilha_pramukh', label_mr: '५. जिल्हा प्रमुख', label_en: '5. Jilha Pramukh', icon: '👑', color: '#dc2626' },
   { id: 'vibhag_pramukh', label_mr: '६. विभाग प्रमुख', label_en: '6. Vibhag Pramukh', icon: '⭐', color: '#0891b2' },
-  { id: 'add_more', label_mr: '➕ अजून जोडा (निवडणुका)', label_en: '+ Add More (Elections)', icon: '🗳️', color: '#4f46e5' },
+  { id: 'add_more', label_mr: '➕ अजून जोडा (सर्व निवडणुका)', label_en: '+ Add More (All Elections)', icon: '🗳️', color: '#4f46e5' },
 ];
 
 export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
@@ -17,17 +17,26 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
   const [prabharis, setPrabharis] = useState([]);
   const [elections, setElections] = useState([]);
   const [boothsList, setBoothsList] = useState([]);
+  const [registeredUsers, setRegisteredUsers] = useState([]);
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedElection, setSelectedElection] = useState('all');
-  const [selectedDistrict, setSelectedDistrict] = useState('all');
-  const [selectedTaluka, setSelectedTaluka] = useState('all');
   const [toastMessage, setToastMessage] = useState('');
+
+  // 3-Dot Corner Dropdown State
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   // Modal States
   const [showAddModal, setShowAddModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
+
+  // User Autocomplete Combobox State
+  const [userSearchText, setUserSearchText] = useState('');
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [selectedAppUser, setSelectedAppUser] = useState(null);
+  const [userValidationError, setUserValidationError] = useState('');
+  const userComboboxRef = useRef(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -53,6 +62,20 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
+  // Close 3-Dot menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setIsMenuOpen(false);
+      }
+      if (userComboboxRef.current && !userComboboxRef.current.contains(e.target)) {
+        setIsUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // 1. Fetch Prabharis from DB
   const fetchPrabharis = async () => {
     try {
@@ -61,9 +84,6 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
       if (activeTab !== 'add_more' && activeTab !== 'all') {
         params.role_type = activeTab;
       }
-      if (selectedElection !== 'all') params.election_id = selectedElection;
-      if (selectedDistrict !== 'all') params.district = selectedDistrict;
-      if (selectedTaluka !== 'all') params.taluka = selectedTaluka;
       if (searchQuery) params.search = searchQuery;
 
       const res = await apiClient.get('/election-prabharis', { params });
@@ -103,18 +123,79 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
     }
   };
 
+  // 4. Fetch Registered App Users from DB
+  const fetchRegisteredUsers = async () => {
+    try {
+      const res = await apiClient.get('/app-registered-users');
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setRegisteredUsers(res.data.data);
+      }
+    } catch (err) {
+      console.warn('Failed to load registered app users:', err);
+    }
+  };
+
   useEffect(() => {
     fetchElections();
     fetchBooths();
+    fetchRegisteredUsers();
   }, []);
 
   useEffect(() => {
     fetchPrabharis();
-  }, [activeTab, selectedElection, selectedDistrict, selectedTaluka]);
+  }, [activeTab]);
+
+  // Filtered App Users for Dropdown Type-to-Search
+  const filteredUsersList = useMemo(() => {
+    if (!userSearchText.trim()) return registeredUsers;
+    const q = userSearchText.toLowerCase();
+    return registeredUsers.filter(
+      (u) =>
+        u.full_name?.toLowerCase().includes(q) ||
+        u.phone?.includes(q) ||
+        u.ward?.toLowerCase().includes(q) ||
+        u.area?.toLowerCase().includes(q)
+    );
+  }, [registeredUsers, userSearchText]);
+
+  // When a Registered User is selected from Combobox
+  const handleSelectUser = (u) => {
+    setSelectedAppUser(u);
+    setUserSearchText(u.full_name);
+    setUserValidationError('');
+    setIsUserDropdownOpen(false);
+
+    // Auto-fill all user info into the form as requested
+    setFormData((prev) => ({
+      ...prev,
+      name: u.full_name,
+      phone: u.phone || prev.phone,
+      whatsapp_number: u.phone || prev.whatsapp_number,
+      village: u.ward || prev.village || 'माधवनगर',
+      area_name: u.area || u.ward || prev.area_name || '',
+      booth_no: u.booth ? u.booth.replace(/[^\d]/g, '').slice(0, 2) || '१' : prev.booth_no,
+    }));
+  };
 
   // Handle Form Submission (Create / Update)
   const handleSavePrabhari = async (e) => {
     e.preventDefault();
+
+    // STRICT CHECK: User must be registered on the app!
+    const isRegistered = registeredUsers.some(
+      (u) => u.full_name.trim().toLowerCase() === formData.name.trim().toLowerCase()
+    );
+
+    if (!isRegistered && !selectedAppUser && !editItem) {
+      setUserValidationError(
+        isMr
+          ? '⚠️ हा युझर ॲपवर नोंदणीकृत नाही! केवळ ॲपवर नोंदणीकृत कार्यकर्त्याचीच निवड करता येईल.'
+          : '⚠️ This user is not registered on the app! Only registered users can be appointed.'
+      );
+      showToast(isMr ? 'केवळ ॲप नोंदणीकृत युझरच निवडा!' : 'Only registered users can be appointed!');
+      return;
+    }
+
     if (!formData.name || !formData.phone) {
       showToast(isMr ? 'कृपया नाव आणि फोन नंबर टाका.' : 'Please enter name and phone.');
       return;
@@ -130,6 +211,8 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
       }
       setShowAddModal(false);
       setEditItem(null);
+      setSelectedAppUser(null);
+      setUserSearchText('');
       fetchPrabharis();
     } catch (err) {
       console.error('Save failed:', err);
@@ -153,6 +236,8 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
   // Open Edit Modal
   const handleEdit = (item) => {
     setEditItem(item);
+    setUserSearchText(item.name);
+    setUserValidationError('');
     setFormData({
       name: item.name,
       phone: item.phone,
@@ -176,6 +261,9 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
   // Open New Modal
   const handleOpenNewModal = (presetRole = null, presetElection = null) => {
     setEditItem(null);
+    setSelectedAppUser(null);
+    setUserSearchText('');
+    setUserValidationError('');
     setFormData({
       name: '',
       phone: '',
@@ -196,7 +284,7 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
     setShowAddModal(true);
   };
 
-  // Filtered List for Display
+  // Filtered List for Display based on single search bar
   const displayedPrabharis = useMemo(() => {
     let list = prabharis;
     if (searchQuery.trim()) {
@@ -206,6 +294,8 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
           p.name?.toLowerCase().includes(q) ||
           p.phone?.includes(q) ||
           p.village?.toLowerCase().includes(q) ||
+          p.taluka?.toLowerCase().includes(q) ||
+          p.district?.toLowerCase().includes(q) ||
           p.area_name?.toLowerCase().includes(q) ||
           p.booth_no?.includes(q)
       );
@@ -213,8 +303,10 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
     return list;
   }, [prabharis, searchQuery]);
 
+  const activeTabConfig = HIERARCHY_TABS.find((t) => t.id === activeTab) || HIERARCHY_TABS[0];
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '40px' }}>
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -241,60 +333,79 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
         </div>
       )}
 
-      {/* Hero Header Banner */}
+      {/* Clean Top Header with Corner 3-Dot Hierarchy Switcher */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%)',
-          borderRadius: '16px',
-          padding: '24px 28px',
-          color: '#ffffff',
-          boxShadow: '0 10px 25px -5px rgba(30, 58, 138, 0.35)',
+          background: '#ffffff',
+          borderRadius: '14px',
+          padding: '16px 22px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.05)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '16px',
+          gap: '14px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div
             style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '14px',
-              background: 'rgba(255, 255, 255, 0.15)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
+              width: '46px',
+              height: '46px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '28px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              fontSize: '22px',
+              boxShadow: '0 4px 12px rgba(30, 64, 175, 0.25)',
+              flexShrink: 0,
             }}
           >
             🏛️
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '11px', fontWeight: '800', background: '#fbbf24', color: '#78350f', padding: '2px 8px', borderRadius: '12px', textTransform: 'uppercase' }}>
-                {isMr ? 'संघटनात्मक रचना' : 'Hierarchy Structure'}
-              </span>
-              <span style={{ fontSize: '11px', color: '#bfdbfe', fontWeight: '600' }}>
-                {isMr ? 'डेटाबेस लाइव्ह कनेक्ट' : 'Live DB Sync'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.3px' }}>
+                {isMr ? 'निवडणूक प्रभारी' : 'Election Prabhari'}
+              </h1>
+              {/* Active Hierarchy Role Indicator Pill */}
+              <span
+                style={{
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  background: `${activeTabConfig.color}15`,
+                  color: activeTabConfig.color,
+                  border: `1px solid ${activeTabConfig.color}40`,
+                  padding: '3px 10px',
+                  borderRadius: '14px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}
+              >
+                <span>{activeTabConfig.icon}</span>
+                <span>{isMr ? activeTabConfig.label_mr : activeTabConfig.label_en}</span>
+                {counts[activeTab] !== undefined && (
+                  <span style={{ background: activeTabConfig.color, color: '#fff', padding: '1px 6px', borderRadius: '10px', fontSize: '10.5px' }}>
+                    {counts[activeTab]}
+                  </span>
+                )}
               </span>
             </div>
-            <h1 style={{ margin: '4px 0 2px 0', fontSize: '24px', fontWeight: '900', letterSpacing: '-0.3px' }}>
-              {isMr ? 'निवडणूक प्रभारी व्यवस्थापन (Election Prabhari)' : 'Election Prabhari Management'}
-            </h1>
-            <p style={{ margin: 0, fontSize: '13.5px', color: '#dbeafe', maxWidth: '650px' }}>
+            <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#64748b' }}>
               {isMr
-                ? 'बूथ कार्यकर्ता, बूथ प्रमुख, एरिया प्रमुख, तालुका, जिल्हा व विभाग प्रमुखांची रचना आणि जबाबदारी व्यवस्थापन.'
-                : 'Booth to Division hierarchy management, appointment, booth assignments, and ground coverage tracking.'}
+                ? 'बूथ ते विभाग स्तरावरील कार्यकर्त्यांची रचना व जबाबदारी व्यवस्थापन.'
+                : 'Booth-to-Division organizational hierarchy and election assignments.'}
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        {/* Action Controls & Corner 3-Dot (⋮) Menu as requested in Screenshot 2 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Appoint New Prabhari Button */}
           <button
             type="button"
             onClick={() => handleOpenNewModal()}
@@ -302,482 +413,484 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
               background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               color: '#ffffff',
               border: 'none',
-              padding: '11px 20px',
-              borderRadius: '10px',
-              fontSize: '13.5px',
+              padding: '9px 16px',
+              borderRadius: '9px',
+              fontSize: '13px',
               fontWeight: '800',
               cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
-              transition: 'all 0.2s ease',
+              gap: '6px',
+              boxShadow: '0 3px 10px rgba(16, 185, 129, 0.3)',
             }}
           >
             <span>➕</span>
-            <span>{isMr ? 'नवीन प्रभारी नियुक्त करा' : 'Appoint New Prabhari'}</span>
+            <span>{isMr ? 'नवीन प्रभारी नियुक्त करा' : 'Appoint Prabhari'}</span>
           </button>
-        </div>
-      </div>
 
-      {/* KPI Stats Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
-        <div style={{ background: '#ffffff', padding: '16px 18px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'एकूण नियुक्त प्रभारी' : 'Total Prabharis'}</div>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginTop: '4px' }}>{counts.total || prabharis.length}</div>
-          <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600', marginTop: '2px' }}>✓ {counts.active || 0} {isMr ? 'सक्रिय कार्यकर्ते' : 'Active'}</div>
-        </div>
+          {/* Corner 3-Dot (⋮) Hierarchy Switcher Menu */}
+          <div ref={menuRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              title={isMr ? 'पद स्तर निवडा (3-Dot Menu)' : 'Choose Hierarchy Level'}
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                border: '1.5px solid #cbd5e1',
+                background: isMenuOpen ? '#eff6ff' : '#ffffff',
+                color: '#1e293b',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '22px',
+                fontWeight: '900',
+                lineHeight: 1,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              ⋮
+            </button>
 
-        <div style={{ background: '#ffffff', padding: '16px 18px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'बूथ कार्यकर्ते' : 'Booth Workers'}</div>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: '#2563eb', marginTop: '4px' }}>{counts.booth_karyakarta || 0}</div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{isMr ? 'घरोघरी मतदार संपर्क' : 'Voter Outreach'}</div>
-        </div>
-
-        <div style={{ background: '#ffffff', padding: '16px 18px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'बूथ प्रमुख' : 'Booth Heads'}</div>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: '#16a34a', marginTop: '4px' }}>{counts.booth_pramukh || 0}</div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{isMr ? 'मतदान केंद्र प्रमुख' : 'Polling Station Leads'}</div>
-        </div>
-
-        <div style={{ background: '#ffffff', padding: '16px 18px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'एरिया व तालुका प्रमुख' : 'Area & Taluka Leads'}</div>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: '#9333ea', marginTop: '4px' }}>{(counts.booth_area_pramukh || 0) + (counts.taluka_pramukh || 0)}</div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{isMr ? 'झोनल व तालुका समन्वय' : 'Zonal & Taluka Coord'}</div>
-        </div>
-
-        <div style={{ background: '#ffffff', padding: '16px 18px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'जिल्हा व विभाग प्रमुख' : 'District & Division Leads'}</div>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: '#dc2626', marginTop: '4px' }}>{(counts.jilha_pramukh || 0) + (counts.vibhag_pramukh || 0)}</div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{isMr ? 'उच्चस्तरीय धोरणात्मक नेतृत्व' : 'High Command'}</div>
-        </div>
-      </div>
-
-      {/* Hierarchy Level Tabs (Starting from Booth as requested) */}
-      <div style={{ background: '#ffffff', borderRadius: '14px', padding: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {HIERARCHY_TABS.map((tab) => {
-            const isSelected = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
+            {/* 3-Dot Dropdown Popover */}
+            {isMenuOpen && (
+              <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 18px',
-                  borderRadius: '10px',
-                  border: isSelected ? `2px solid ${tab.color}` : '1.5px solid transparent',
-                  background: isSelected ? `${tab.color}15` : '#f8fafc',
-                  color: isSelected ? tab.color : '#475569',
-                  fontSize: '13.5px',
-                  fontWeight: isSelected ? '800' : '600',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.15s ease',
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 8px)',
+                  width: '270px',
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 14px 35px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08)',
+                  padding: '8px',
+                  zIndex: 9999,
+                  animation: 'fadeIn 0.15s ease-out',
+                  boxSizing: 'border-box',
                 }}
               >
-                <span>{tab.icon}</span>
-                <span>{isMr ? tab.label_mr : tab.label_en}</span>
-                {tab.id !== 'add_more' && counts[tab.id] !== undefined && (
-                  <span
-                    style={{
-                      background: isSelected ? tab.color : '#cbd5e1',
-                      color: isSelected ? '#ffffff' : '#334155',
-                      fontSize: '11px',
-                      padding: '1px 7px',
-                      borderRadius: '10px',
-                      fontWeight: '800',
-                    }}
-                  >
-                    {counts[tab.id]}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+                <div style={{ padding: '6px 10px 8px 10px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9' }}>
+                  {isMr ? 'प्रभारी स्तर निवडा' : 'Select Prabhari Level'}
+                </div>
 
-      {/* TAB 7: "Add More" - Shows All Elections from Database */}
-      {activeTab === 'add_more' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
-                  🗳️ {isMr ? 'डेटाबेसमधील सर्व निवडणुका (Elections in Database)' : 'All Elections in Database'}
-                </h2>
-                <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: '#64748b' }}>
-                  {isMr
-                    ? 'येथून तुम्ही विशिष्ट निवडणुकीसाठी नवीन प्रभारी स्तर किंवा थेट प्रभारी नेमू शकता.'
-                    : 'Select an election to appoint dedicated election prabharis or manage custom campaign levels.'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleOpenNewModal()}
-                style={{
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '9px 16px',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <span>➕</span>
-                <span>{isMr ? 'या निवडणुकीसाठी प्रभारी जोडा' : 'Add Prabhari for Election'}</span>
-              </button>
-            </div>
-
-            {/* Elections Cards Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-              {elections.map((ele) => (
-                <div
-                  key={ele.id}
-                  style={{
-                    background: '#f8fafc',
-                    borderRadius: '12px',
-                    padding: '18px',
-                    border: '1.5px solid #e2e8f0',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '14px',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '6px' }}>
+                  {HIERARCHY_TABS.map((tab) => {
+                    const isSelected = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          setIsMenuOpen(false);
+                        }}
                         style={{
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          background: ele.status === 'ACTIVE' || ele.status === 'LIVE' ? '#dcfce7' : '#f1f5f9',
-                          color: ele.status === 'ACTIVE' || ele.status === 'LIVE' ? '#166534' : '#475569',
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
+                          border: isSelected ? `1.5px solid ${tab.color}` : '1px solid transparent',
+                          background: isSelected ? `${tab.color}12` : 'transparent',
+                          color: isSelected ? tab.color : '#334155',
+                          fontSize: '13px',
+                          fontWeight: isSelected ? '800' : '600',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'background 0.15s ease',
+                        }}
+                        onMouseOver={(e) => {
+                          if (!isSelected) e.currentTarget.style.background = '#f8fafc';
+                        }}
+                        onMouseOut={(e) => {
+                          if (!isSelected) e.currentTarget.style.background = 'transparent';
                         }}
                       >
-                        ● {ele.status || 'ACTIVE'}
-                      </span>
-                      <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
-                        ID: #{ele.id}
-                      </span>
-                    </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '15px' }}>{tab.icon}</span>
+                          <span>{isMr ? tab.label_mr : tab.label_en}</span>
+                        </div>
+                        {tab.id !== 'add_more' && counts[tab.id] !== undefined && (
+                          <span
+                            style={{
+                              background: isSelected ? tab.color : '#e2e8f0',
+                              color: isSelected ? '#ffffff' : '#475569',
+                              fontSize: '11px',
+                              padding: '1px 7px',
+                              borderRadius: '10px',
+                              fontWeight: '800',
+                            }}
+                          >
+                            {counts[tab.id]}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
-                      {ele.name}
-                    </h3>
-                    <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '6px' }}>
-                      प्रकार: <span style={{ fontWeight: '700', color: '#334155' }}>{ele.type || 'विधानसभा'}</span>
-                    </div>
-                  </div>
+      {/* Clean Single Modern Search Bar (Replacing Screenshot 3 as requested) */}
+      <div
+        style={{
+          background: '#ffffff',
+          borderRadius: '12px',
+          padding: '10px 16px',
+          border: '1.5px solid #e2e8f0',
+          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+        }}
+      >
+        <span style={{ fontSize: '17px', color: '#64748b' }}>🔍</span>
+        <input
+          type="text"
+          placeholder={isMr ? 'नाव, फोन नंबर, गाव, तालुका किंवा बूथ क्रमांकाने शोधा...' : 'Search by name, phone, village, taluka, or booth number...'}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            flex: 1,
+            border: 'none',
+            outline: 'none',
+            fontSize: '14px',
+            color: '#0f172a',
+            background: 'transparent',
+          }}
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '50%',
+              width: '24px',
+              height: '24px',
+              cursor: 'pointer',
+              color: '#64748b',
+              fontSize: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            title={isMr ? 'साफ करा' : 'Clear'}
+          >
+            ✕
+          </button>
+        )}
+        <div
+          style={{
+            fontSize: '12px',
+            fontWeight: '800',
+            background: '#f1f5f9',
+            color: '#475569',
+            padding: '4px 10px',
+            borderRadius: '12px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {isMr ? 'एकूण निकाल:' : 'Results:'} {displayedPrabharis.length}
+        </div>
+      </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#2563eb' }}>
-                      👥 {ele.prabhari_count || 0} {isMr ? 'प्रभारी नियुक्त' : 'Prabharis Appointed'}
-                    </div>
+      {/* TAB: Add More (All Elections in DB) */}
+      {activeTab === 'add_more' ? (
+        <div style={{ background: '#ffffff', borderRadius: '14px', padding: '22px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
+                🗳️ {isMr ? 'डेटाबेसमधील सर्व निवडणुका' : 'All Elections in Database'}
+              </h2>
+              <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                {isMr
+                  ? 'येथून तुम्ही विशिष्ट निवडणुकीसाठी नवीन प्रभारी स्तर किंवा थेट प्रभारी नेमू शकता.'
+                  : 'Select an election to appoint dedicated campaign prabharis.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleOpenNewModal()}
+              style={{
+                background: '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                padding: '9px 16px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>➕</span>
+              <span>{isMr ? 'या निवडणुकीसाठी प्रभारी जोडा' : 'Add Prabhari for Election'}</span>
+            </button>
+          </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOpenNewModal(null, ele)}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+            {elections.map((ele) => (
+              <div
+                key={ele.id}
+                style={{
+                  background: '#f8fafc',
+                  borderRadius: '12px',
+                  padding: '18px',
+                  border: '1.5px solid #e2e8f0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '14px',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span
                       style={{
-                        background: '#1e40af',
-                        color: '#ffffff',
-                        border: 'none',
-                        padding: '6px 12px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        padding: '3px 8px',
                         borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
+                        background: ele.status === 'ACTIVE' || ele.status === 'LIVE' ? '#dcfce7' : '#f1f5f9',
+                        color: ele.status === 'ACTIVE' || ele.status === 'LIVE' ? '#166534' : '#475569',
                       }}
                     >
-                      + {isMr ? 'प्रभारी जोडा' : 'Assign'}
-                    </button>
+                      ● {ele.status || 'ACTIVE'}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
+                      ID: #{ele.id}
+                    </span>
+                  </div>
+
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                    {ele.name}
+                  </h3>
+                  <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '6px' }}>
+                    प्रकार: <span style={{ fontWeight: '700', color: '#334155' }}>{ele.type || 'विधानसभा'}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#2563eb' }}>
+                    👥 {ele.prabhari_count || 0} {isMr ? 'प्रभारी नियुक्त' : 'Prabharis'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenNewModal(null, ele)}
+                    style={{
+                      background: '#1e40af',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + {isMr ? 'प्रभारी जोडा' : 'Assign'}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       ) : (
-        /* TAB 1 TO 6: Hierarchy Members List & Management */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Filter Bar */}
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '14px',
-              padding: '16px 20px',
-              border: '1px solid #e2e8f0',
-              display: 'flex',
-              gap: '12px',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            }}
-          >
-            {/* Search Box */}
-            <div style={{ flex: '1 1 240px', position: 'relative' }}>
-              <input
-                type="text"
-                placeholder={isMr ? 'नाव, फोन, बूथ क्र. किंवा परिसराने शोधा...' : 'Search by name, phone, booth or area...'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px 9px 34px',
-                  borderRadius: '8px',
-                  border: '1.5px solid #cbd5e1',
-                  fontSize: '13px',
-                  boxSizing: 'border-box',
-                }}
-              />
-              <span style={{ position: 'absolute', left: '10px', top: '9px', color: '#94a3b8' }}>🔍</span>
-            </div>
-
-            {/* District Filter */}
-            <select
-              value={selectedDistrict}
-              onChange={(e) => setSelectedDistrict(e.target.value)}
-              style={{
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1.5px solid #cbd5e1',
-                fontSize: '13px',
-                background: '#ffffff',
-                fontWeight: '600',
-              }}
-            >
-              <option value="all">{isMr ? 'सर्व जिल्हे (All Districts)' : 'All Districts'}</option>
-              <option value="सांगली">सांगली (Sangli)</option>
-              <option value="कोल्हापूर">कोल्हापूर (Kolhapur)</option>
-              <option value="सातारा">सातारा (Satara)</option>
-              <option value="पुणे">पुणे (Pune)</option>
-            </select>
-
-            {/* Taluka Filter */}
-            <select
-              value={selectedTaluka}
-              onChange={(e) => setSelectedTaluka(e.target.value)}
-              style={{
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1.5px solid #cbd5e1',
-                fontSize: '13px',
-                background: '#ffffff',
-                fontWeight: '600',
-              }}
-            >
-              <option value="all">{isMr ? 'सर्व तालुके (All Talukas)' : 'All Talukas'}</option>
-              <option value="मिरज">मिरज</option>
-              <option value="सांगली शहर">सांगली शहर</option>
-              <option value="कुपवाड">कुपवाड</option>
-              <option value="तासगाव">तासगाव</option>
-              <option value="कवठे महांकाळ">कवठे महांकाळ</option>
-              <option value="वाळवा">वाळवा / इस्लामपूर</option>
-            </select>
-
-            {/* Total Results */}
-            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', marginLeft: 'auto' }}>
-              {isMr ? 'एकूण निकाल:' : 'Total Results:'} <span style={{ color: '#0f172a' }}>{displayedPrabharis.length}</span>
-            </div>
-          </div>
-
-          {/* Members Table */}
-          <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569', fontSize: '12px', textTransform: 'uppercase' }}>
-                    <th style={{ padding: '12px 16px' }}>#</th>
-                    <th style={{ padding: '12px 16px' }}>{isMr ? 'प्रभारी नाव व पद' : 'Name & Role'}</th>
-                    <th style={{ padding: '12px 16px' }}>{isMr ? 'जिल्हा / तालुका' : 'District / Taluka'}</th>
-                    <th style={{ padding: '12px 16px' }}>{isMr ? 'नियुक्त बूथ / कार्यक्षेत्र' : 'Assigned Booth / Area'}</th>
-                    <th style={{ padding: '12px 16px' }}>{isMr ? 'संपर्क (कॉल / व्हॉट्सॲप)' : 'Contact'}</th>
-                    <th style={{ padding: '12px 16px' }}>{isMr ? 'लक्षित मतदार' : 'Voters Target'}</th>
-                    <th style={{ padding: '12px 16px' }}>{isMr ? 'स्थिती' : 'Status'}</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>{isMr ? 'कृती' : 'Actions'}</th>
+        /* Members Data Table */
+        <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569', fontSize: '12px', textTransform: 'uppercase' }}>
+                  <th style={{ padding: '12px 16px' }}>#</th>
+                  <th style={{ padding: '12px 16px' }}>{isMr ? 'प्रभारी नाव व पद' : 'Name & Role'}</th>
+                  <th style={{ padding: '12px 16px' }}>{isMr ? 'जिल्हा / तालुका' : 'District / Taluka'}</th>
+                  <th style={{ padding: '12px 16px' }}>{isMr ? 'नियुक्त बूथ / कार्यक्षेत्र' : 'Assigned Booth / Area'}</th>
+                  <th style={{ padding: '12px 16px' }}>{isMr ? 'संपर्क (कॉल / व्हॉट्सॲप)' : 'Contact'}</th>
+                  <th style={{ padding: '12px 16px' }}>{isMr ? 'लक्षित मतदार' : 'Voters Target'}</th>
+                  <th style={{ padding: '12px 16px' }}>{isMr ? 'स्थिती' : 'Status'}</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>{isMr ? 'कृती' : 'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                      ⏳ {isMr ? 'डेटाबेसवरून माहिती लोड होत आहे...' : 'Loading prabharis from database...'}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                        ⏳ {isMr ? 'डेटाबेसवरून माहिती लोड होत आहे...' : 'Loading prabharis from database...'}
+                ) : displayedPrabharis.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                      ℹ️ {isMr ? 'कोणतेही प्रभारी सापडले नाहीत.' : 'No prabharis found.'}
+                    </td>
+                  </tr>
+                ) : (
+                  displayedPrabharis.map((item, idx) => (
+                    <tr
+                      key={item.id}
+                      style={{
+                        borderBottom: '1px solid #f1f5f9',
+                        transition: 'background 0.15s ease',
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseOut={(e) => (e.currentTarget.style.background = '#ffffff')}
+                    >
+                      <td style={{ padding: '14px 16px', color: '#94a3b8', fontWeight: '700' }}>{idx + 1}</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '14px' }}>{item.name}</div>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            marginTop: '2px',
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            background: '#eff6ff',
+                            color: '#1d4ed8',
+                            fontWeight: '700',
+                          }}
+                        >
+                          {item.role_title_mr || item.role_title_en}
+                        </span>
                       </td>
-                    </tr>
-                  ) : displayedPrabharis.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                        ℹ️ {isMr ? 'या स्तरावर अद्याप कोणतेही प्रभारी नियुक्त केलेले नाहीत.' : 'No prabharis found for this hierarchy level.'}
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ fontWeight: '700', color: '#334155' }}>📍 {item.district}</div>
+                        <div style={{ fontSize: '11.5px', color: '#64748b' }}>{item.taluka || '—'}</div>
                       </td>
-                    </tr>
-                  ) : (
-                    displayedPrabharis.map((item, idx) => (
-                      <tr
-                        key={item.id}
-                        style={{
-                          borderBottom: '1px solid #f1f5f9',
-                          transition: 'background 0.15s ease',
-                        }}
-                        onMouseOver={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                        onMouseOut={(e) => (e.currentTarget.style.background = '#ffffff')}
-                      >
-                        <td style={{ padding: '14px 16px', color: '#94a3b8', fontWeight: '700' }}>{idx + 1}</td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '14px' }}>{item.name}</div>
-                          <span
+                      <td style={{ padding: '14px 16px' }}>
+                        {item.booth_no && item.booth_no !== 'सर्व' ? (
+                          <div style={{ display: 'inline-block', background: '#f5f3ff', color: '#6d28d9', padding: '2px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '11.5px' }}>
+                            🗳️ बूथ क्र. {item.booth_no}
+                          </div>
+                        ) : (
+                          <div style={{ display: 'inline-block', background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '11.5px' }}>
+                            🏛️ संपूर्ण क्षेत्र
+                          </div>
+                        )}
+                        <div style={{ fontSize: '12px', color: '#334155', fontWeight: '600', marginTop: '3px', maxWidth: '240px' }}>
+                          {item.booth_name || item.area_name || item.village || '—'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <a
+                            href={`tel:${item.phone}`}
                             style={{
-                              display: 'inline-block',
-                              marginTop: '2px',
-                              fontSize: '11px',
-                              padding: '2px 8px',
+                              background: '#f1f5f9',
+                              color: '#0f172a',
+                              padding: '5px 10px',
                               borderRadius: '6px',
-                              background: '#eff6ff',
-                              color: '#1d4ed8',
+                              textDecoration: 'none',
                               fontWeight: '700',
+                              fontSize: '12px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
                             }}
                           >
-                            {item.role_title_mr || item.role_title_en}
-                          </span>
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontWeight: '700', color: '#334155' }}>📍 {item.district}</div>
-                          <div style={{ fontSize: '11.5px', color: '#64748b' }}>{item.taluka || '—'}</div>
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          {item.booth_no && item.booth_no !== 'सर्व' ? (
-                            <div style={{ display: 'inline-block', background: '#f5f3ff', color: '#6d28d9', padding: '2px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '11.5px' }}>
-                              🗳️ बूथ क्र. {item.booth_no}
-                            </div>
-                          ) : (
-                            <div style={{ display: 'inline-block', background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '11.5px' }}>
-                              🏛️ संपूर्ण क्षेत्र
-                            </div>
-                          )}
-                          <div style={{ fontSize: '12px', color: '#334155', fontWeight: '600', marginTop: '3px', maxWidth: '240px' }}>
-                            {item.booth_name || item.area_name || item.village || '—'}
-                          </div>
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            📞 {item.phone}
+                          </a>
+                          {item.whatsapp_number && (
                             <a
-                              href={`tel:${item.phone}`}
+                              href={`https://wa.me/91${item.whatsapp_number.replace(/[^\d]/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
                               style={{
-                                background: '#f1f5f9',
-                                color: '#0f172a',
-                                padding: '5px 10px',
+                                background: '#dcfce7',
+                                color: '#15803d',
+                                padding: '5px 8px',
                                 borderRadius: '6px',
                                 textDecoration: 'none',
-                                fontWeight: '700',
+                                fontWeight: '800',
                                 fontSize: '12px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
                               }}
+                              title="WhatsApp"
                             >
-                              📞 {item.phone}
+                              💬
                             </a>
-                            {item.whatsapp_number && (
-                              <a
-                                href={`https://wa.me/91${item.whatsapp_number.replace(/[^\d]/g, '')}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  background: '#dcfce7',
-                                  color: '#15803d',
-                                  padding: '5px 8px',
-                                  borderRadius: '6px',
-                                  textDecoration: 'none',
-                                  fontWeight: '800',
-                                  fontSize: '12px',
-                                }}
-                                title="WhatsApp"
-                              >
-                                💬
-                              </a>
-                            )}
-                          </div>
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontWeight: '800', color: '#0f172a' }}>{item.assigned_voters_target || 500} मतदार</div>
-                          <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600' }}>
-                            {item.covered_voters || 0} संपर्कित ({Math.round(((item.covered_voters || 0) / (item.assigned_voters_target || 500)) * 100)}%)
-                          </div>
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <span
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ fontWeight: '800', color: '#0f172a' }}>{item.assigned_voters_target || 500} मतदार</div>
+                        <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600' }}>
+                          {item.covered_voters || 0} संपर्कित ({Math.round(((item.covered_voters || 0) / (item.assigned_voters_target || 500)) * 100)}%)
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            background: item.status === 'active' ? '#dcfce7' : item.status === 'training' ? '#fef3c7' : '#fee2e2',
+                            color: item.status === 'active' ? '#166534' : item.status === 'training' ? '#92400e' : '#991b1b',
+                          }}
+                        >
+                          ● {item.status === 'active' ? (isMr ? 'सक्रिय' : 'Active') : item.status === 'training' ? (isMr ? 'प्रशिक्षणार्थी' : 'Training') : (isMr ? 'रजेवर' : 'Inactive')}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(item)}
                             style={{
-                              padding: '4px 10px',
-                              borderRadius: '20px',
-                              fontSize: '11px',
-                              fontWeight: '800',
-                              background: item.status === 'active' ? '#dcfce7' : item.status === 'training' ? '#fef3c7' : '#fee2e2',
-                              color: item.status === 'active' ? '#166534' : item.status === 'training' ? '#92400e' : '#991b1b',
+                              background: '#f8fafc',
+                              border: '1px solid #cbd5e1',
+                              padding: '5px 9px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '700',
                             }}
+                            title={isMr ? 'माहिती बदला' : 'Edit'}
                           >
-                            ● {item.status === 'active' ? (isMr ? 'सक्रिय' : 'Active') : item.status === 'training' ? (isMr ? 'प्रशिक्षणार्थी' : 'Training') : (isMr ? 'रजेवर' : 'Inactive')}
-                          </span>
-                        </td>
-                        <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(item)}
-                              style={{
-                                background: '#f8fafc',
-                                border: '1px solid #cbd5e1',
-                                padding: '5px 9px',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                fontWeight: '700',
-                              }}
-                              title={isMr ? 'माहिती बदला' : 'Edit'}
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(item.id, item.name)}
-                              style={{
-                                background: '#fef2f2',
-                                border: '1px solid #fecaca',
-                                color: '#dc2626',
-                                padding: '5px 9px',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                fontWeight: '700',
-                              }}
-                              title={isMr ? 'काढून टाका' : 'Delete'}
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                            ✏️
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.id, item.name)}
+                            style={{
+                              background: '#fef2f2',
+                              border: '1px solid #fecaca',
+                              color: '#dc2626',
+                              padding: '5px 9px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                            }}
+                            title={isMr ? 'काढून टाका' : 'Delete'}
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* MODAL: Appoint / Edit Prabhari */}
+      {/* MODAL: Appoint / Edit Prabhari with Full Name Combobox Dropdown & Autofill */}
       {showAddModal && (
         <div
           style={{
@@ -810,8 +923,8 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
                 <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
                   {editItem ? (isMr ? '✏️ प्रभारी माहिती अद्ययावत करा' : 'Edit Prabhari Details') : (isMr ? '➕ नवीन प्रभारी नियुक्ती नोंद' : 'Appoint New Prabhari')}
                 </h2>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>
-                  {isMr ? 'सर्व माहिती डेटाबेसमध्ये सुरक्षित सेव्ह होईल' : 'Directly saved into the database'}
+                <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: '700' }}>
+                  ✓ {isMr ? 'केवळ ॲपवर नोंदणीकृत असलेले कार्यकर्ते निवडता येतील' : 'Only registered app users can be selected'}
                 </span>
               </div>
               <button
@@ -871,25 +984,135 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
                 </div>
               </div>
 
-              {/* Row 2: Name & Phone */}
+              {/* Row 2: SEARCHABLE FULL NAME DROPDOWN (Combobox) + Phone with Autofill */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
+                {/* Full Name with Type-to-Search Dropdown */}
+                <div ref={userComboboxRef} style={{ position: 'relative' }}>
                   <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', marginBottom: '4px', color: '#334155' }}>
-                    {isMr ? 'प्रभारीचे पूर्ण नाव' : 'Full Name'} *
+                    {isMr ? 'पूर्ण नाव (ॲप नोंदणीकृत युझर निवडा)' : 'Full Name (Select App User)'} *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder={isMr ? 'उदा. सचिन दत्तात्रय पाटील' : 'e.g. Sachin Patil'}
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
-                  />
+
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      required
+                      placeholder={isMr ? 'नाव टाईप करा किंवा निवडा...' : 'Type name or select from list...'}
+                      value={userSearchText}
+                      onChange={(e) => {
+                        setUserSearchText(e.target.value);
+                        setFormData({ ...formData, name: e.target.value });
+                        setIsUserDropdownOpen(true);
+                        setUserValidationError('');
+                      }}
+                      onFocus={() => setIsUserDropdownOpen(true)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 30px 9px 12px',
+                        borderRadius: '8px',
+                        border: userValidationError ? '1.5px solid #ef4444' : selectedAppUser ? '1.5px solid #10b981' : '1.5px solid #cbd5e1',
+                        fontSize: '13px',
+                        boxSizing: 'border-box',
+                        background: '#ffffff',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#64748b',
+                        fontSize: '11px',
+                        padding: 0,
+                      }}
+                    >
+                      ▼
+                    </button>
+                  </div>
+
+                  {/* Registered Users Autocomplete Dropdown List */}
+                  {isUserDropdownOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        maxHeight: '220px',
+                        overflowY: 'auto',
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        borderRadius: '10px',
+                        boxShadow: '0 12px 28px rgba(0,0,0,0.18)',
+                        zIndex: 10001,
+                        marginTop: '4px',
+                      }}
+                    >
+                      <div style={{ padding: '6px 10px', fontSize: '11px', fontWeight: '800', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        {isMr ? '📱 ॲपवर नोंदणीकृत सर्व कार्यकर्ते:' : 'Registered App Users:'} ({filteredUsersList.length})
+                      </div>
+
+                      {filteredUsersList.length === 0 ? (
+                        <div style={{ padding: '12px', fontSize: '12px', color: '#ef4444', textAlign: 'center', fontWeight: '700' }}>
+                          ⚠️ {isMr ? 'हा युझर ॲपवर सापडला नाही. केवळ ॲप युझर्सच नेमले जाऊ शकतात.' : 'User not found in registered app users.'}
+                        </div>
+                      ) : (
+                        filteredUsersList.map((u) => (
+                          <div
+                            key={u.id}
+                            onClick={() => handleSelectUser(u)}
+                            style={{
+                              padding: '9px 12px',
+                              borderBottom: '1px solid #f1f5f9',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              transition: 'background 0.15s ease',
+                            }}
+                            onMouseOver={(e) => (e.currentTarget.style.background = '#eff6ff')}
+                            onMouseOut={(e) => (e.currentTarget.style.background = '#ffffff')}
+                          >
+                            <div>
+                              <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '13px' }}>
+                                {u.full_name}
+                              </div>
+                              <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                                📞 {u.phone} {u.ward ? `• ${u.ward}` : ''}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#dcfce7', color: '#166534', padding: '2px 7px', borderRadius: '10px' }}>
+                              ✓ App
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Validation Error Banner */}
+                  {userValidationError && (
+                    <div style={{ fontSize: '11.5px', color: '#ef4444', fontWeight: '700', marginTop: '4px' }}>
+                      {userValidationError}
+                    </div>
+                  )}
+
+                  {selectedAppUser && !userValidationError && (
+                    <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '700', marginTop: '3px' }}>
+                      ✓ ॲप युझर पडताळणी यशस्वी ({selectedAppUser.phone})
+                    </div>
+                  )}
                 </div>
 
+                {/* Phone Number (Autofilled automatically from user selection) */}
                 <div>
                   <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', marginBottom: '4px', color: '#334155' }}>
-                    {isMr ? 'मोबाईल नंबर' : 'Phone Number'} *
+                    {isMr ? 'मोबाईल नंबर (आपोआप भरला जाईल)' : 'Phone Number (Auto-filled)'} *
                   </label>
                   <input
                     type="tel"
@@ -897,12 +1120,12 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
                     placeholder="9822000000"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value, whatsapp_number: formData.whatsapp_number || e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', background: selectedAppUser ? '#f0fdf4' : '#ffffff' }}
                   />
                 </div>
               </div>
 
-              {/* Row 3: District, Taluka, Village */}
+              {/* Row 3: District, Taluka, Village (Auto-filled or editable) */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', marginBottom: '4px', color: '#334155' }}>

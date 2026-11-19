@@ -389,6 +389,7 @@ Route::post('/election-prabharis', [NetaDashboardController::class, 'storeElecti
 Route::put('/election-prabharis/{id}', [NetaDashboardController::class, 'updateElectionPrabhari'])->whereNumber('id');
 Route::delete('/election-prabharis/{id}', [NetaDashboardController::class, 'deleteElectionPrabhari'])->whereNumber('id');
 Route::get('/elections-list', [NetaDashboardController::class, 'getElectionsList']);
+Route::get('/app-registered-users', [NetaDashboardController::class, 'getRegisteredUsers']);
 
 
 

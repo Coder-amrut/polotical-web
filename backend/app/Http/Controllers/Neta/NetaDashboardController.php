@@ -2667,4 +2667,44 @@ class NetaDashboardController extends Controller
             'data' => $all,
         ]);
     }
+
+    /**
+     * GET /api/app-registered-users
+     * Returns all registered app users with their profile, phone and assigned area
+     */
+    public function getRegisteredUsers()
+    {
+        $users = DB::table('users as u')
+            ->leftJoin('worker_profiles as wp', 'u.id', '=', 'wp.user_id')
+            ->leftJoin('neta_karyakartas as nk', 'u.id', '=', 'nk.user_id')
+            ->select(
+                'u.id',
+                'u.full_name',
+                'u.phone',
+                'u.email',
+                'u.status',
+                'wp.assigned_ward',
+                'wp.primary_booths',
+                'nk.assigned_area_mr'
+            )
+            ->where('u.status', 'ACTIVE')
+            ->orderBy('u.full_name', 'asc')
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'full_name' => $u->full_name,
+                    'phone' => $u->phone,
+                    'email' => $u->email,
+                    'ward' => $u->assigned_ward,
+                    'booth' => $u->primary_booths,
+                    'area' => $u->assigned_area_mr,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $users,
+        ]);
+    }
 }
