@@ -759,43 +759,70 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
     return combined.length > 0 ? combined : ['१', '२', '३', '४', '५', '६', '७', '८', '९', '१०'];
   }, [dbBooths, voters, selectedDistrict, selectedTaluka, selectedVillage]);
 
-  // Modal 1 (Upload): Cascading Talukas & Villages
+  // Helper to extract booths for given taluka and village from DB
+  const getBoothsForLocation = (taluka, village) => {
+    const list = [];
+    (boothsList || []).forEach((b) => {
+      const matchTal = !taluka || b.taluka_mr === taluka || b.taluka_en === taluka;
+      const matchVil = !village || b.village_mr === village || b.village_en === village;
+      if (matchTal && matchVil) {
+        const bNo = String(b.booth_no || '').replace(/बूथ\s*क्र\.?\s*/i, '').trim();
+        if (bNo && !list.includes(bNo)) list.push(bNo);
+      }
+    });
+    // Add standard numbered booths so there is always a full selection
+    for (let i = 1; i <= 25; i++) {
+      const devanagariNo = String(i).replace(/\d/g, (d) => '०१२३४५६७८९'[d]);
+      if (!list.includes(devanagariNo) && !list.includes(String(i))) {
+        list.push(devanagariNo);
+      }
+    }
+    return list;
+  };
+
+  // Modal 1 (Upload): Cascading Talukas, Villages & Booths
   const uploadTargetTalukas = useMemo(() => {
     if (!uploadTargetDistrict) return [];
-    let list = MASTER_GEOGRAPHY[uploadTargetDistrict] ? Object.keys(MASTER_GEOGRAPHY[uploadTargetDistrict]) : [];
-    if (dbTalukas.length > 0 && selectedDistrict === uploadTargetDistrict) {
-      list = Array.from(new Set([...list, ...dbTalukas]));
-    }
-    return list.length > 0 ? list : ['मिरज', 'तासगाव', 'जत', 'वाळवा / इस्लामपूर'];
+    const fromMaster = MASTER_GEOGRAPHY[uploadTargetDistrict] ? Object.keys(MASTER_GEOGRAPHY[uploadTargetDistrict]) : [];
+    const fromDb = (dbTalukas || []).filter(Boolean);
+    const combined = Array.from(new Set([...fromMaster, ...(selectedDistrict === uploadTargetDistrict ? fromDb : [])]));
+    return combined.length > 0 ? combined : ['मिरज', 'तासगाव', 'जत', 'वाळवा / इस्लामपूर'];
   }, [uploadTargetDistrict, dbTalukas, selectedDistrict]);
 
   const uploadTargetVillages = useMemo(() => {
     if (!uploadTargetDistrict || !uploadTargetTaluka) return [];
-    let list = MASTER_GEOGRAPHY[uploadTargetDistrict]?.[uploadTargetTaluka] || [];
-    if (dbVillages.length > 0 && selectedTaluka === uploadTargetTaluka) {
-      list = Array.from(new Set([...list, ...dbVillages]));
-    }
-    return list.length > 0 ? list : ['माधवनगर', 'सांगली शहर', 'कुपवाड', 'मिरज शहर'];
-  }, [uploadTargetDistrict, uploadTargetTaluka, dbVillages, selectedTaluka]);
+    const fromMaster = MASTER_GEOGRAPHY[uploadTargetDistrict]?.[uploadTargetTaluka] || [];
+    const fromDb = (dbVillages || []).filter(Boolean);
+    const fromStats = (villageStats || []).filter((v) => v.district === uploadTargetDistrict && v.taluka === uploadTargetTaluka).map((v) => v.village_name);
+    const combined = Array.from(new Set([...fromMaster, ...(selectedTaluka === uploadTargetTaluka ? fromDb : []), ...fromStats]));
+    return combined.length > 0 ? combined : ['माधवनगर', 'सांगली शहर', 'कुपवाड', 'मिरज शहर'];
+  }, [uploadTargetDistrict, uploadTargetTaluka, dbVillages, selectedTaluka, villageStats]);
 
-  // Modal 2 (New Voter): Cascading Talukas & Villages
+  const uploadTargetBooths = useMemo(() => {
+    return getBoothsForLocation(uploadTargetTaluka, uploadTargetVillage);
+  }, [boothsList, uploadTargetTaluka, uploadTargetVillage]);
+
+  // Modal 2 (New Voter): Cascading Talukas, Villages & Booths
   const newVoterTalukas = useMemo(() => {
     if (!newVoter.district) return [];
-    let list = MASTER_GEOGRAPHY[newVoter.district] ? Object.keys(MASTER_GEOGRAPHY[newVoter.district]) : [];
-    if (dbTalukas.length > 0 && selectedDistrict === newVoter.district) {
-      list = Array.from(new Set([...list, ...dbTalukas]));
-    }
-    return list.length > 0 ? list : ['मिरज', 'तासगाव', 'जत', 'वाळवा / इस्लामपूर'];
+    const fromMaster = MASTER_GEOGRAPHY[newVoter.district] ? Object.keys(MASTER_GEOGRAPHY[newVoter.district]) : [];
+    const fromDb = (dbTalukas || []).filter(Boolean);
+    const combined = Array.from(new Set([...fromMaster, ...(selectedDistrict === newVoter.district ? fromDb : [])]));
+    return combined.length > 0 ? combined : ['मिरज', 'तासगाव', 'जत', 'वाळवा / इस्लामपूर'];
   }, [newVoter.district, dbTalukas, selectedDistrict]);
 
   const newVoterVillages = useMemo(() => {
     if (!newVoter.district || !newVoter.taluka) return [];
-    let list = MASTER_GEOGRAPHY[newVoter.district]?.[newVoter.taluka] || [];
-    if (dbVillages.length > 0 && selectedTaluka === newVoter.taluka) {
-      list = Array.from(new Set([...list, ...dbVillages]));
-    }
-    return list.length > 0 ? list : ['माधवनगर', 'सांगली शहर', 'कुपवाड', 'मिरज शहर'];
-  }, [newVoter.district, newVoter.taluka, dbVillages, selectedTaluka]);
+    const fromMaster = MASTER_GEOGRAPHY[newVoter.district]?.[newVoter.taluka] || [];
+    const fromDb = (dbVillages || []).filter(Boolean);
+    const fromStats = (villageStats || []).filter((v) => v.district === newVoter.district && v.taluka === newVoter.taluka).map((v) => v.village_name);
+    const combined = Array.from(new Set([...fromMaster, ...(selectedTaluka === newVoter.taluka ? fromDb : []), ...fromStats]));
+    return combined.length > 0 ? combined : ['माधवनगर', 'सांगली शहर', 'कुपवाड', 'मिरज शहर'];
+  }, [newVoter.district, newVoter.taluka, dbVillages, selectedTaluka, villageStats]);
+
+  const newVoterBooths = useMemo(() => {
+    return getBoothsForLocation(newVoter.taluka, newVoter.village);
+  }, [boothsList, newVoter.taluka, newVoter.village]);
 
   // Fetch voters from DB API endpoint (/api/voters-list)
   const fetchVotersFromDb = async (overrideParams = {}) => {
@@ -2525,13 +2552,15 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
                     onChange={(e) => {
                       const d = e.target.value;
                       setUploadTargetDistrict(d);
-                      const talukas = MASTER_GEOGRAPHY[d] ? Object.keys(MASTER_GEOGRAPHY[d]) : ['मिरज'];
-                      const firstTal = talukas[0] || '';
+                      const talList = MASTER_GEOGRAPHY[d] ? Object.keys(MASTER_GEOGRAPHY[d]) : ['मिरज'];
+                      const firstTal = talList[0] || '';
                       setUploadTargetTaluka(firstTal);
-                      const villages = (firstTal && MASTER_GEOGRAPHY[d]?.[firstTal]) ? MASTER_GEOGRAPHY[d][firstTal] : ['माधवनगर'];
-                      setUploadTargetVillage(villages[0] || '');
+                      const vilList = (firstTal && MASTER_GEOGRAPHY[d]?.[firstTal]) ? MASTER_GEOGRAPHY[d][firstTal] : ['सांगली शहर'];
+                      const firstVil = vilList[0] || '';
+                      setUploadTargetVillage(firstVil);
+                      setUploadTargetBooth('१');
                     }}
-                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1.5px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff', fontWeight: '600' }}
                   >
                     {availableDistricts.map((d) => (
                       <option key={d} value={d}>{d}</option>
@@ -2547,10 +2576,12 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
                     onChange={(e) => {
                       const t = e.target.value;
                       setUploadTargetTaluka(t);
-                      const villages = (t && MASTER_GEOGRAPHY[uploadTargetDistrict]?.[t]) ? MASTER_GEOGRAPHY[uploadTargetDistrict][t] : ['माधवनगर'];
-                      setUploadTargetVillage(villages[0] || '');
+                      const vilList = (t && MASTER_GEOGRAPHY[uploadTargetDistrict]?.[t]) ? MASTER_GEOGRAPHY[uploadTargetDistrict][t] : ['सांगली शहर'];
+                      const firstVil = vilList[0] || '';
+                      setUploadTargetVillage(firstVil);
+                      setUploadTargetBooth('१');
                     }}
-                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1.5px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff', fontWeight: '600' }}
                   >
                     {uploadTargetTalukas.map((t) => (
                       <option key={t} value={t}>{t}</option>
@@ -2563,8 +2594,11 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
                   </label>
                   <select
                     value={uploadTargetVillage}
-                    onChange={(e) => setUploadTargetVillage(e.target.value)}
-                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
+                    onChange={(e) => {
+                      setUploadTargetVillage(e.target.value);
+                      setUploadTargetBooth('१');
+                    }}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1.5px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff', fontWeight: '600' }}
                   >
                     {uploadTargetVillages.map((v) => (
                       <option key={v} value={v}>{v}</option>
@@ -2575,13 +2609,17 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
                     {isMr ? 'बूथ क्रमांक' : 'Booth No.'}
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={uploadTargetBooth}
                     onChange={(e) => setUploadTargetBooth(e.target.value)}
-                    placeholder="उदा. १"
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
-                  />
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1.5px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff', fontWeight: '600' }}
+                  >
+                    {uploadTargetBooths.map((b) => (
+                      <option key={b} value={b}>
+                        {isMr ? `बूथ क्रमांक ${b}` : `Booth No. ${b}`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -2859,13 +2897,17 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
                   <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
                     {isMr ? 'बूथ क्र.' : 'Booth No.'}
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={newVoter.booth_no}
                     onChange={(e) => setNewVoter({ ...newVoter, booth_no: e.target.value })}
-                    placeholder="उदा. १"
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                  />
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1.5px solid #cbd5e1', fontSize: '13px', background: '#ffffff', fontWeight: '600' }}
+                  >
+                    {newVoterBooths.map((b) => (
+                      <option key={b} value={b}>
+                        {isMr ? `बूथ क्रमांक ${b}` : `Booth No. ${b}`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

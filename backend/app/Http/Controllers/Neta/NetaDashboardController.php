@@ -792,12 +792,17 @@ class NetaDashboardController extends Controller
             $villageList = array_values(array_unique(array_filter(array_merge($fromVillagesTable, $fromCitizensVillages, $fromCatalogVillages))));
             sort($villageList);
         } else {
-            // When Taluka is 'all', gather all active villages from DB table 'villages', 'neta_booth_progress', and catalog
-            $fromVillagesTable = DB::table('villages')->pluck('village_name')->filter()->toArray();
+            // When Taluka is 'all', do NOT pluck all 45,000 villages! Only include villages with active booths/citizens or district villages
             $fromBoothsVillages = DB::table('neta_booth_progress')->pluck('village_mr')->filter()->toArray();
             $fromCitizensVillages = DB::table('neta_citizens')->pluck('village_mr')->filter()->toArray();
+            $fromVillagesTable = DB::table('villages')
+                ->when($matchedDistrictCode, fn($q) => $q->where('district_code', $matchedDistrictCode))
+                ->limit(35)
+                ->pluck('village_name')
+                ->filter()
+                ->toArray();
             $defaultVillages = ['सांगली शहर', 'माधवनगर', 'कुपवाड', 'विश्रामबाग', 'बुधगाव', 'हरिपूर', 'कवलापूर', 'बामणोली', 'धामणी', 'समडोळी', 'मालगाव', 'बिसूर', 'तुंग', 'कसबे डिग्रज'];
-            $villageList = array_values(array_unique(array_filter(array_merge($fromVillagesTable, $fromBoothsVillages, $fromCitizensVillages, $defaultVillages))));
+            $villageList = array_values(array_unique(array_filter(array_merge($fromBoothsVillages, $fromCitizensVillages, $fromVillagesTable, $defaultVillages))));
             sort($villageList);
         }
 

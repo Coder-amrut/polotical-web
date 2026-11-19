@@ -641,6 +641,10 @@ export default function OfficerDashboard() {
           box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4) !important;
         }
 
+        .neta-backdrop {
+          display: none;
+        }
+
         /* Mobile Drawer & Responsive Layout */
         @media (max-width: 900px) {
           .neta-dashboard-layout {

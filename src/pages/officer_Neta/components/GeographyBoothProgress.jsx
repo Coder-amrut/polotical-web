@@ -234,7 +234,7 @@ export default function GeographyBoothProgress({ lang = 'mr' }) {
   // Level 3: Village Options
   const villageOptions = [
     { value: 'all', label: isMr ? 'सर्व गावे' : 'All Villages' },
-    ...villageList.map((v) => ({
+    ...villageList.slice(0, 150).map((v) => ({
       value: v.value,
       label: isMr ? cleanLabel(v.label_mr || v.value, true) : cleanLabel(v.label_en || v.value, false),
     })),
