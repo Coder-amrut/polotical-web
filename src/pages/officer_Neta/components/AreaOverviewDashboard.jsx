@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { netaApi } from '../api/netaApi';
 
 export default function AreaOverviewDashboard({ onNavigate, lang = 'mr' }) {
@@ -242,403 +242,253 @@ export default function AreaOverviewDashboard({ onNavigate, lang = 'mr' }) {
         </div>
       </div>
 
-      {/* Main KPI Stat Cards Grid — 6 Colorful Distinct Containers */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-
-        {/* 1. Saffron / Orange: Active Karyakartas on Field */}
+      {/* 1. Official Constituency Demographics & Electoral Intelligence Dashboard */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+        {/* Card 1: Total Population */}
         <div
           style={{
-            background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-            borderRadius: '16px',
+            background: '#ffffff',
+            borderRadius: '14px',
             padding: '20px',
-            boxShadow: '0 8px 24px rgba(234, 88, 12, 0.32)',
-            cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            color: '#ffffff',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             position: 'relative',
             overflow: 'hidden',
           }}
-          onClick={() => setSelectedKpiModal('workers')}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px) scale(1.015)';
-            e.currentTarget.style.boxShadow = '0 14px 30px rgba(234, 88, 12, 0.45)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(234, 88, 12, 0.32)';
-          }}
-          title={isMr ? 'सविस्तर माहिती पाहण्यासाठी क्लिक करा' : 'Click to view full info'}
         >
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#3b82f6' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13.5px', color: '#ffffff', fontWeight: '800', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-              {isMr ? 'आज सक्रिय कार्यकर्ते ऑन-फील्ड' : 'Active Workers Today'}
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              {isMr ? 'मतदारसंघ एकूण लोकसंख्या' : 'Total Constituency Population'}
             </span>
-            <span style={{ fontSize: '18px', padding: '6px 10px', background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(4px)', borderRadius: '10px' }}>🚩</span>
+            <span style={{ fontSize: '18px', background: '#eff6ff', padding: '6px 10px', borderRadius: '10px' }}>👥</span>
           </div>
-          <div style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }}>
-            {profile.active_karyakartas_today}{' '}
-            <span style={{ fontSize: '15px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' }}>
-              / {profile.total_karyakartas} {isMr ? 'एकूण' : 'Total'}
-            </span>
-          </div>
-          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', color: '#ffffff', fontWeight: '750' }}>
-              ● {Math.round((profile.active_karyakartas_today / profile.total_karyakartas) * 100)}% {isMr ? 'उपस्थिती दर' : 'Attendance'}
-            </span>
-            <span style={{ fontSize: '11px', background: '#ffffff', color: '#c2410c', padding: '3px 9px', borderRadius: '9999px', fontWeight: '800', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              👆 {isMr ? 'संपूर्ण माहिती' : 'Full Info'}
-            </span>
-          </div>
-        </div>
-
-        {/* 2. Deep Royal Blue: Total Booths Status */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 8px 24px rgba(37, 99, 235, 0.32)',
-            cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            color: '#ffffff',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-          onClick={() => setSelectedKpiModal('booths')}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px) scale(1.015)';
-            e.currentTarget.style.boxShadow = '0 14px 30px rgba(37, 99, 235, 0.45)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(37, 99, 235, 0.32)';
-          }}
-          title={isMr ? 'सविस्तर माहिती पाहण्यासाठी क्लिक करा' : 'Click to view full info'}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13.5px', color: '#ffffff', fontWeight: '800', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-              {isMr ? 'एकूण मतदान केंद्रे (बूथ)' : 'Polling Stations / Booths'}
-            </span>
-            <span style={{ fontSize: '18px', padding: '6px 10px', background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(4px)', borderRadius: '10px' }}>🗳️</span>
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }}>
-            {profile.total_booths}
-          </div>
-          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: '6px', fontSize: '11.5px', color: '#ffffff' }}>
-              <span style={{ color: '#86efac', fontWeight: '800' }}>{summary.high_coverage_booths} {isMr ? 'उच्च' : 'High'}</span>
-              <span>·</span>
-              <span style={{ color: '#fde047', fontWeight: '800' }}>{summary.medium_coverage_booths} {isMr ? 'मध्यम' : 'Med'}</span>
-            </div>
-            <span style={{ fontSize: '11px', background: '#ffffff', color: '#1d4ed8', padding: '3px 9px', borderRadius: '9999px', fontWeight: '800', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              👆 {isMr ? 'संपूर्ण माहिती' : 'Full Info'}
-            </span>
-          </div>
-        </div>
-
-        {/* 3. Emerald Jade Green: Surveyed Households Reach */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.32)',
-            cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            color: '#ffffff',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-          onClick={() => setSelectedKpiModal('crm')}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px) scale(1.015)';
-            e.currentTarget.style.boxShadow = '0 14px 30px rgba(16, 185, 129, 0.45)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(16, 185, 129, 0.32)';
-          }}
-          title={isMr ? 'सविस्तर माहिती पाहण्यासाठी क्लिक करा' : 'Click to view full info'}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13.5px', color: '#ffffff', fontWeight: '800', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-              {isMr ? 'मतदार कुटुंब संपर्क (नागरिक CRM)' : 'Surveyed Voter Households'}
-            </span>
-            <span style={{ fontSize: '18px', padding: '6px 10px', background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(4px)', borderRadius: '10px' }}>👥</span>
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }}>
-            {profile.surveyed_households ? profile.surveyed_households.toLocaleString('en-IN') : '1,42,850'}
-          </div>
-          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', color: '#ffffff', fontWeight: '800' }}>
-              {profile.sentiment?.support || 68}% {isMr ? 'अनुकूल कल' : 'Favorable'}
-            </span>
-            <span style={{ fontSize: '11px', background: '#ffffff', color: '#047857', padding: '3px 9px', borderRadius: '9999px', fontWeight: '800', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              👆 {isMr ? 'संपूर्ण माहिती' : 'Full Info'}
-            </span>
-          </div>
-        </div>
-
-        {/* 4. Vivid Purple / Violet: Meetings & Field Tours */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 8px 24px rgba(139, 92, 246, 0.32)',
-            cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            color: '#ffffff',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-          onClick={() => setSelectedKpiModal('meetings')}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px) scale(1.015)';
-            e.currentTarget.style.boxShadow = '0 14px 30px rgba(139, 92, 246, 0.45)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(139, 92, 246, 0.32)';
-          }}
-          title={isMr ? 'सविस्तर माहिती पाहण्यासाठी क्लिक करा' : 'Click to view full info'}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13.5px', color: '#ffffff', fontWeight: '800', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-              {isMr ? 'आगामी बैठका व दौरे' : 'Upcoming Tours & Meetings'}
-            </span>
-            <span style={{ fontSize: '18px', padding: '6px 10px', background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(4px)', borderRadius: '10px' }}>📅</span>
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }}>
-            {summary.upcoming_meetings_count || 14}
-          </div>
-          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '650' }}>
-              {isMr ? 'नियोजित स्थानिक सभा' : 'Scheduled Events'}
-            </span>
-            <span style={{ fontSize: '11px', background: '#ffffff', color: '#6d28d9', padding: '3px 9px', borderRadius: '9999px', fontWeight: '800', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              👆 {isMr ? 'संपूर्ण माहिती' : 'Full Info'}
-            </span>
-          </div>
-        </div>
-
-        {/* 5. Ruby Crimson Red: Pending Civic Grievances & Tasks */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 8px 24px rgba(239, 68, 68, 0.32)',
-            cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            color: '#ffffff',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-          onClick={() => setSelectedKpiModal('tasks')}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px) scale(1.015)';
-            e.currentTarget.style.boxShadow = '0 14px 30px rgba(239, 68, 68, 0.45)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(239, 68, 68, 0.32)';
-          }}
-          title={isMr ? 'सविस्तर माहिती पाहण्यासाठी क्लिक करा' : 'Click to view full info'}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13.5px', color: '#ffffff', fontWeight: '800', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-              {isMr ? 'नागरिक तक्रारी व प्रलंबित कामे' : 'Grievances & Pending Tasks'}
-            </span>
-            <span style={{ fontSize: '18px', padding: '6px 10px', background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(4px)', borderRadius: '10px' }}>⚡</span>
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }}>
-            {summary.pending_grievances_count || 42}{' '}
-            <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' }}>
-              ({isMr ? '१८ अतितात्काळ' : '18 Urgent'})
-            </span>
-          </div>
-          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', color: '#ffffff', fontWeight: '750' }}>
-              ✓ 88% {isMr ? 'निवारण दर' : 'Resolution Rate'}
-            </span>
-            <span style={{ fontSize: '11px', background: '#ffffff', color: '#dc2626', padding: '3px 9px', borderRadius: '9999px', fontWeight: '800', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              👆 {isMr ? 'संपूर्ण माहिती' : 'Full Info'}
-            </span>
-          </div>
-        </div>
-
-        {/* 6. Warm Amber / Honey: Total Constituency Population & Registered Voters */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 8px 24px rgba(245, 158, 11, 0.32)',
-            cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            color: '#ffffff',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-          onClick={() => setSelectedKpiModal('population')}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px) scale(1.015)';
-            e.currentTarget.style.boxShadow = '0 14px 30px rgba(245, 158, 11, 0.45)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(245, 158, 11, 0.32)';
-          }}
-          title={isMr ? 'सविस्तर माहिती पाहण्यासाठी क्लिक करा' : 'Click to view full info'}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13.5px', color: '#ffffff', fontWeight: '800', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-              {isMr ? 'मतदारसंघ एकूण लोकसंख्या' : 'Constituency Population & Voters'}
-            </span>
-            <span style={{ fontSize: '18px', padding: '6px 10px', background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(4px)', borderRadius: '10px' }}>🌐</span>
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: '30px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.5px' }}>
             {(profile.total_population || 345200).toLocaleString('en-IN')}{' '}
-            <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' }}>
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
               {isMr ? 'नागरिक' : 'Citizens'}
             </span>
           </div>
-          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', color: '#ffffff', fontWeight: '750' }}>
-              🗳️ {(profile.total_voters || 248500).toLocaleString('en-IN')} {isMr ? 'नोंदणीकृत मतदार' : 'Voters'}
-            </span>
-            <span style={{ fontSize: '11px', background: '#ffffff', color: '#b45309', padding: '3px 9px', borderRadius: '9999px', fontWeight: '800', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              👆 {isMr ? 'संपूर्ण माहिती' : 'Full Info'}
-            </span>
+          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+            <span>📈 {isMr ? 'मतदार नोंदणी दर: ९९.३%' : 'Voter Registration: 99.3%'}</span>
+            <span style={{ color: '#2563eb', fontWeight: '750' }}>{isMr ? 'सांगली २८२' : 'Sangli 282'}</span>
           </div>
         </div>
 
+        {/* Card 2: Registered Voters with Male/Female/Third Gender */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '14px',
+            padding: '20px',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#10b981' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              {isMr ? 'अधिकृत नोंदणीकृत मतदार' : 'Official Registered Voters'}
+            </span>
+            <span style={{ fontSize: '18px', background: '#ecfdf5', padding: '6px 10px', borderRadius: '10px' }}>🗳️</span>
+          </div>
+          <div style={{ fontSize: '30px', fontWeight: '900', color: '#047857', letterSpacing: '-0.5px' }}>
+            {(profile.total_voters || 248500).toLocaleString('en-IN')}{' '}
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+              {isMr ? 'मतदार' : 'Voters'}
+            </span>
+          </div>
+          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11.5px', color: '#334155', flexWrap: 'wrap' }}>
+            <span>👨 <strong>{(profile.male_voters || 128400).toLocaleString('en-IN')}</strong> {isMr ? 'पुरुष' : 'Male'}</span>
+            <span>•</span>
+            <span>👩 <strong>{(profile.female_voters || 119850).toLocaleString('en-IN')}</strong> {isMr ? 'महिला' : 'Female'}</span>
+            <span>•</span>
+            <span>⚧ <strong>{(profile.third_gender || 250)}</strong> {isMr ? 'तृतीयपंथी' : 'Others'}</span>
+          </div>
+        </div>
+
+        {/* Card 3: Polling Stations / Booths Infrastructure */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '14px',
+            padding: '20px',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#8b5cf6' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              {isMr ? 'एकूण मतदान केंद्रे (बूथ)' : 'Total Polling Booths'}
+            </span>
+            <span style={{ fontSize: '18px', background: '#f5f3ff', padding: '6px 10px', borderRadius: '10px' }}>🏛️</span>
+          </div>
+          <div style={{ fontSize: '30px', fontWeight: '900', color: '#6d28d9', letterSpacing: '-0.5px' }}>
+            {profile.total_booths || 285}{' '}
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+              {isMr ? 'केंद्रे' : 'Booths'}
+            </span>
+          </div>
+          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
+            <span style={{ color: '#16a34a', fontWeight: '700' }}>✓ {(profile.total_booths || 285) - (profile.sensitive_booths || 22)} {isMr ? 'सर्वसामान्य' : 'Normal'}</span>
+            <span style={{ color: '#dc2626', fontWeight: '750' }}>⚠️ {profile.sensitive_booths || 22} {isMr ? 'संवेदनशील केंद्र' : 'Sensitive'}</span>
+          </div>
+        </div>
+
+        {/* Card 4: Field Workers & Prabhari Organization */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '14px',
+            padding: '20px',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#f59e0b' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              {isMr ? 'बूथ संघटन व निवडणूक प्रभारी' : 'Election Prabhari Network'}
+            </span>
+            <span style={{ fontSize: '18px', background: '#fffbeb', padding: '6px 10px', borderRadius: '10px' }}>🚩</span>
+          </div>
+          <div style={{ fontSize: '30px', fontWeight: '900', color: '#b45309', letterSpacing: '-0.5px' }}>
+            {profile.active_karyakartas_today || 27}{' '}
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+              / {profile.total_karyakartas || 154} {isMr ? 'कार्यकर्ते' : 'Active'}
+            </span>
+          </div>
+          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
+            <span style={{ color: '#059669', fontWeight: '750' }}>✓ १००% बूथ प्रमुख नियुक्त</span>
+            <span style={{ color: '#d97706', fontWeight: '800' }}>⏳ {profile.days_to_election || 45} {isMr ? 'दिवस बाकी' : 'Days Left'}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Sentiment Gauge & Political Mood Index */}
+      {/* 2. Village & Ward Wise Voter Population Statistics Table */}
       <div
         style={{
           background: '#ffffff',
           borderRadius: '14px',
-          padding: '24px',
+          padding: '22px',
           border: '1px solid #e2e8f0',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>
-              📊 {isMr ? 'मतदारसंघ जनभावना व कल विश्लेषण' : 'Constituency Voter Sentiment & Trend'}
+            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>📍</span>
+              <span>{isMr ? 'गाव व प्रभागनिहाय लोकसंख्या व मतदार सांख्यिकी' : 'Village & Ward Demographic and Electoral Roll Breakdown'}</span>
             </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
-              {isMr
-                ? `${profile.surveyed_households.toLocaleString('en-IN')} कुटुंबांच्या प्रत्यक्ष संवादातून गोळा केलेला सांख्यिकीय राजकीय कल`
-                : 'Aggregated ground political mood based on surveyed households'}
+            <p style={{ margin: '3px 0 0 0', fontSize: '12.5px', color: '#64748b' }}>
+              {isMr ? 'मतदारसंघातील सर्व गावे, प्रभाग, अंदाजे लोकसंख्या आणि अधिकृत मतदार संख्या' : 'Administrative breakdown of population, voters, and polling stations per village/ward.'}
             </p>
           </div>
-          <button
-            onClick={() => onNavigate('reports')}
-            style={{
-              background: '#f1f5f9',
-              border: 'none',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: '#1e293b',
-              cursor: 'pointer',
-            }}
-          >
-            {isMr ? 'सविस्तर अहवाल पहा →' : 'View Deep Report →'}
-          </button>
-        </div>
-
-        {/* Multi-segment Progress Bar */}
-        <div
-          style={{
-            height: '24px',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            display: 'flex',
-            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
-          }}
-        >
-          <div
-            style={{
-              width: `${profile.sentiment.support}%`,
-              background: 'linear-gradient(90deg, #16a34a, #22c55e)',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            title={`${profile.sentiment.support}% Support`}
-          >
-            {profile.sentiment.support}%
-          </div>
-          <div
-            style={{
-              width: `${profile.sentiment.neutral_swing}%`,
-              background: 'linear-gradient(90deg, #eab308, #facc15)',
-              color: '#713f12',
-              fontSize: '12px',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            title={`${profile.sentiment.neutral_swing}% Swing`}
-          >
-            {profile.sentiment.neutral_swing}%
-          </div>
-          <div
-            style={{
-              width: `${profile.sentiment.opposition}%`,
-              background: 'linear-gradient(90deg, #ef4444, #f87171)',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            title={`${profile.sentiment.opposition}% Opposition`}
-          >
-            {profile.sentiment.opposition}%
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => onNavigate && onNavigate('voters')}
+              style={{
+                background: '#eff6ff',
+                color: '#1d4ed8',
+                border: '1px solid #bfdbfe',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              📋 {isMr ? 'मतदार यादी पहा' : 'View Voter List'}
+            </button>
+            <button
+              onClick={() => onNavigate && onNavigate('geography_progress')}
+              style={{
+                background: '#f0fdf4',
+                color: '#15803d',
+                border: '1px solid #bbf7d0',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              🗳️ {isMr ? 'बूथ प्रगती पहा' : 'Booth Progress'}
+            </button>
           </div>
         </div>
 
-        {/* Sentiment Legends */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginTop: '16px' }}>
-          <div style={{ padding: '12px', background: '#f0fdf4', borderRadius: '8px', borderLeft: '4px solid #16a34a' }}>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: '#15803d' }}>
-              ✓ {isMr ? 'अनुकूल व भक्कम मतदार' : 'Favorable Loyalists'} ({profile.sentiment.support}%)
-            </div>
-            <div style={{ fontSize: '12px', color: '#334155', marginTop: '3px' }}>
-              {isMr ? 'लाडकी बहीण, शेतकरी सन्मान व विकासकामांचा प्रभाव' : 'Impact of Ladki Bahin, Farmer aid & local work'}
-            </div>
-          </div>
-
-          <div style={{ padding: '12px', background: '#fefce8', borderRadius: '8px', borderLeft: '4px solid #eab308' }}>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: '#a16207' }}>
-              ⚖ {isMr ? 'तटस्थ / निर्णय न घेतलेले' : 'Swing / Undecided'} ({profile.sentiment.neutral_swing}%)
-            </div>
-            <div style={{ fontSize: '12px', color: '#334155', marginTop: '3px' }}>
-              {isMr ? 'पाणी, रस्ते व रोजगारावर लक्ष दिल्यास आपल्याकडे वळू शकतात' : 'Can tilt with focused water & civic redressal'}
-            </div>
-          </div>
-
-          <div style={{ padding: '12px', background: '#fef2f2', borderRadius: '8px', borderLeft: '4px solid #ef4444' }}>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: '#b91c1c' }}>
-              ⚠ {isMr ? 'सावध / विरोधक प्रभाव' : 'Opposition Leaning'} ({profile.sentiment.opposition}%)
-            </div>
-            <div style={{ fontSize: '12px', color: '#334155', marginTop: '3px' }}>
-              {isMr ? 'कुपवाड व बामणी परिसरातील बुथांवर विशेष लक्ष हवे' : 'Requires micro-strategy in Kupwad & Bamani'}
-            </div>
-          </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
+                <th style={{ padding: '11px 14px', fontWeight: '800' }}>{isMr ? 'अ.क्र.' : 'Sr.'}</th>
+                <th style={{ padding: '11px 14px', fontWeight: '800' }}>{isMr ? 'गाव / प्रभाग नाव' : 'Village / Ward'}</th>
+                <th style={{ padding: '11px 14px', fontWeight: '800' }}>{isMr ? 'तालुका' : 'Taluka'}</th>
+                <th style={{ padding: '11px 14px', fontWeight: '800', textAlign: 'right' }}>{isMr ? 'अंदाजे लोकसंख्या' : 'Population'}</th>
+                <th style={{ padding: '11px 14px', fontWeight: '800', textAlign: 'right' }}>{isMr ? 'एकूण मतदार' : 'Total Voters'}</th>
+                <th style={{ padding: '11px 14px', fontWeight: '800', textAlign: 'right' }}>{isMr ? 'पुरुष / महिला' : 'Male / Female'}</th>
+                <th style={{ padding: '11px 14px', fontWeight: '800', textAlign: 'center' }}>{isMr ? 'बूथ संख्या' : 'Booths'}</th>
+                <th style={{ padding: '11px 14px', fontWeight: '800', textAlign: 'center' }}>{isMr ? 'बूथ प्रमुख स्थिती' : 'In-Charge'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { sr: '१', name: 'सांगली शहर मध्य', taluka: 'मिरज', pop: '१,१२,४००', voters: '८२,४५०', male: '४२,१००', female: '४०,३५०', booths: '८४', prabhari: '१००% पूर्ण' },
+                { sr: '२', name: 'माधवनगर', taluka: 'मिरज', pop: '२८,५००', voters: '२१,४००', male: '११,०५०', female: '१०,३५०', booths: '२४', prabhari: '१००% पूर्ण' },
+                { sr: '३', name: 'कुपवाड औद्योगिक वसाहत', taluka: 'मिरज', pop: '४२,१००', voters: '३१,२००', male: '१६,५००', female: '१४,७००', booths: '३६', prabhari: '९५% पूर्ण' },
+                { sr: '४', name: 'विश्रामबाग पश्चिम', taluka: 'मिरज', pop: '३८,६००', voters: '२८,९००', male: '१४,८००', female: '१४,१००', booths: '३२', prabhari: '१००% पूर्ण' },
+                { sr: '५', name: 'कसबे डिग्रज', taluka: 'मिरज', pop: '१९,२००', voters: '१४,६००', male: '७,५००', female: '७,१००', booths: '१६', prabhari: '१००% पूर्ण' },
+                { sr: '६', name: 'बामणी परिसर', taluka: 'मिरज', pop: '१४,८००', voters: '११,२५०', male: '५,८००', female: '५,४५०', booths: '१२', prabhari: '१००% पूर्ण' },
+              ].map((row, idx) => (
+                <tr
+                  key={idx}
+                  style={{
+                    borderBottom: '1px solid #f1f5f9',
+                    background: idx % 2 === 0 ? '#ffffff' : '#fafafa',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                  onMouseOut={(e) => (e.currentTarget.style.background = idx % 2 === 0 ? '#ffffff' : '#fafafa')}
+                >
+                  <td style={{ padding: '10px 14px', fontWeight: '750', color: '#64748b' }}>{row.sr}</td>
+                  <td style={{ padding: '10px 14px', fontWeight: '800', color: '#0f172a' }}>
+                    🏛️ {row.name}
+                  </td>
+                  <td style={{ padding: '10px 14px', color: '#475569', fontWeight: '600' }}>{row.taluka}</td>
+                  <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>{row.pop}</td>
+                  <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: '#047857' }}>{row.voters}</td>
+                  <td style={{ padding: '10px 14px', textAlign: 'right', fontSize: '12px', color: '#475569' }}>
+                    {row.male} / {row.female}
+                  </td>
+                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                    <span style={{ background: '#eff6ff', color: '#1e40af', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '12px' }}>
+                      {row.booths} बूथ
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                    <span style={{ background: '#ecfdf5', color: '#15803d', padding: '3px 8px', borderRadius: '6px', fontWeight: '750', fontSize: '11.5px', border: '1px solid #a7f3d0' }}>
+                      ✓ {row.prabhari}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
