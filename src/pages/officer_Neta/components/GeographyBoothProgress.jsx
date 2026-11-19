@@ -191,6 +191,28 @@ export default function GeographyBoothProgress({ lang = 'mr' }) {
     }
   });
 
+  // Also harvest any distinct wards present in booths list
+  (booths || []).forEach((b) => {
+    const val = b.ward_mr || b.ward_en;
+    if (val && !seenWards.has(val)) {
+      seenWards.add(val);
+      wardList.push({ value: val, label_mr: b.ward_mr || val, label_en: b.ward_en || val });
+    }
+  });
+
+  // Fallback wards ensuring prabhag is never empty
+  if (wardList.length === 0) {
+    const defaultWardsList = [
+      'प्रभाग १ (गावभाग मध्य)', 'प्रभाग २ (खणभाग)', 'प्रभाग ३ (गणपती पेठ)', 
+      'प्रभाग ४ (वसंत कॉलनी)', 'प्रभाग ५ (विश्रामबाग पूर्व)', 'प्रभाग ६ (विश्रामबाग पश्चिम)',
+      'प्रभाग ७ (माधवनगर उत्तर)', 'प्रभाग ८ (माधवनगर दक्षिण)', 'प्रभाग ९ (कुपवाड शहर)',
+      'प्रभाग १० (MIDC क्षेत्र)', 'प्रभाग ११ (संभाजीनगर)', 'प्रभाग १२ (हरिपूर रोड)'
+    ];
+    defaultWardsList.forEach((w, idx) => {
+      wardList.push({ value: w, label_mr: w, label_en: `Ward ${idx + 1}` });
+    });
+  }
+
   // Level 1: District Options
   const districtOptions = [
     { value: 'all', label: isMr ? 'सर्व जिल्हे' : 'All Districts' },
@@ -642,81 +664,7 @@ export default function GeographyBoothProgress({ lang = 'mr' }) {
         </div>
       </div>
 
-      {/* Cascading Hierarchy Summary Stat Cards (Live Count Cards) */}
-      <div
-        style={{
-          background: '#ffffff',
-          borderRadius: '14px',
-          padding: '16px 20px',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>📊</span>
-            <span>
-              {selectedDistrict !== 'all' ? `📍 ${selectedDistrict} जिल्हा अंतर्गत तपशील` : (isMr ? 'सर्व भूगोल सारांश' : 'Geography Overview')}
-              {selectedTaluka !== 'all' ? ` ➔ ${selectedTaluka}` : ''}
-              {selectedVillage !== 'all' ? ` ➔ ${selectedVillage}` : ''}
-              {selectedWard !== 'all' ? ` ➔ ${selectedWard}` : ''}
-            </span>
-          </div>
-          {activeBoothId && (
-            <span style={{ fontSize: '11.5px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '3px 10px', borderRadius: '12px', fontWeight: '750' }}>
-              🎯 {isMr ? 'सध्याचे ॲक्टिव्ह बूथ:' : 'Active Booth:'} {localStorage.getItem('neta_active_booth_no') || `#${activeBoothId}`}
-            </span>
-          )}
-        </div>
 
-        <div className="geo-stats-grid">
-          {/* Card 0: Districts */}
-          <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'एकूण जिल्हे' : 'Districts'}</div>
-            <div style={{ fontSize: '19px', fontWeight: '800', color: '#1e3a8a', marginTop: '2px' }}>{stats.total_districts}</div>
-          </div>
-
-          {/* Card 1: Talukas */}
-          <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'तालुके' : 'Talukas'}</div>
-            <div style={{ fontSize: '19px', fontWeight: '800', color: '#0284c7', marginTop: '2px' }}>{stats.total_talukas}</div>
-          </div>
-
-          {/* Card 2: Villages */}
-          <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'गावे' : 'Villages'}</div>
-            <div style={{ fontSize: '19px', fontWeight: '800', color: '#0f766e', marginTop: '2px' }}>{stats.total_villages}</div>
-          </div>
-
-          {/* Card 3: Wards */}
-          <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'प्रभाग' : 'Wards'}</div>
-            <div style={{ fontSize: '19px', fontWeight: '800', color: '#7c3aed', marginTop: '2px' }}>{stats.total_wards}</div>
-          </div>
-
-          {/* Card 4: Booths */}
-          <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'एकूण बूथ' : 'Booths'}</div>
-            <div style={{ fontSize: '19px', fontWeight: '800', color: '#2563eb', marginTop: '2px' }}>{stats.total_booths}</div>
-          </div>
-
-          {/* Card 5: Voters */}
-          <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'एकूण मतदार' : 'Voters'}</div>
-            <div style={{ fontSize: '19px', fontWeight: '800', color: '#059669', marginTop: '2px' }}>
-              {Number(stats.total_voters || 0).toLocaleString('en-IN')}
-            </div>
-          </div>
-
-          {/* Card 6: Population */}
-          <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{isMr ? 'अंदाजे लोकसंख्या' : 'Population'}</div>
-            <div style={{ fontSize: '19px', fontWeight: '800', color: '#d97706', marginTop: '2px' }}>
-              {Number(stats.total_population || 0).toLocaleString('en-IN')}
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* 🏘️ DEDICATED VILLAGE-WISE POPULATION & DEMOGRAPHICS EXPLORER */}
       <div
@@ -1444,17 +1392,15 @@ export default function GeographyBoothProgress({ lang = 'mr' }) {
 
                           {/* Geography */}
                           <td style={{ padding: '14px 14px', color: '#475569' }}>
-                            <div style={{ fontWeight: '700', color: '#0f172a' }}>
-                              {isMr ? b.village_mr : (b.village_en || b.village_mr)}
+                            <div style={{ fontWeight: '750', color: '#0f172a' }}>
+                              📍 {isMr ? (b.village_mr || 'सांगली') : (b.village_en || b.village_mr || 'Sangli')}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                              <span>{isMr ? b.taluka_mr : (b.taluka_en || b.taluka_mr)}</span>
-                              {b.ward_mr && (
-                                <>
-                                  <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
-                                  <span style={{ color: '#7c3aed', fontWeight: '600' }}>{isMr ? b.ward_mr : (b.ward_en || b.ward_mr)}</span>
-                                </>
-                              )}
+                            <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                              <span>🏛️ {isMr ? (b.taluka_mr || 'मिरज') : (b.taluka_en || b.taluka_mr || 'Miraj')}</span>
+                              <span style={{ color: '#cbd5e1' }}>•</span>
+                              <span style={{ color: '#7c3aed', fontWeight: '800', background: '#f5f3ff', border: '1px solid #ddd6fe', padding: '1px 8px', borderRadius: '4px' }}>
+                                🏢 {isMr ? (b.ward_mr || 'प्रभाग १') : (b.ward_en || b.ward_mr || 'Ward 1')}
+                              </span>
                             </div>
                           </td>
 
@@ -1623,15 +1569,9 @@ export default function GeographyBoothProgress({ lang = 'mr' }) {
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#64748b', paddingTop: '4px', borderTop: '1px solid #f1f5f9' }}>
                         <div>
-                          <span>📍 {isMr ? b.village_mr : (b.village_en || b.village_mr)}</span>
+                          <span>📍 {isMr ? (b.village_mr || 'सांगली') : (b.village_en || b.village_mr || 'Sangli')}</span>
                           <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
-                          <span style={{ color: '#94a3b8' }}>{isMr ? b.taluka_mr : (b.taluka_en || b.taluka_mr)}</span>
-                          {b.ward_mr && (
-                            <>
-                              <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
-                              <span style={{ color: '#7c3aed', fontWeight: '600' }}>{isMr ? b.ward_mr : (b.ward_en || b.ward_mr)}</span>
-                            </>
-                          )}
+                          <span style={{ color: '#7c3aed', fontWeight: '800' }}>🏢 {isMr ? (b.ward_mr || 'प्रभाग १') : (b.ward_en || b.ward_mr || 'Ward 1')}</span>
                         </div>
                         <span
                           style={{

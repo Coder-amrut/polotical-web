@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { netaApi } from '../api/netaApi';
 
 export default function AreaOverviewDashboard({ onNavigate, lang = 'mr' }) {
