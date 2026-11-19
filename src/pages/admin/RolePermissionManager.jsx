@@ -1463,97 +1463,52 @@ export default function RolePermissionManager({
                         </div>
                       </td>
 
-                      {/* Column 3: Assigned To Interactive Container */}
+                      {/* Column 3: Assigned To - Click to Show All Users */}
                       <td style={{ padding: '14px 20px', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', maxWidth: 270 }}>
-                          <div style={{ position: 'relative', width: '100%' }}>
-                            <select
-                              className="clean-select-box"
-                              value=""
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val) handleAssignAction(perm.id, val);
-                              }}
-                              style={{
-                                width: '100%',
-                                height: 38,
-                                paddingLeft: 12,
-                                paddingRight: 28,
-                                borderRadius: 8,
-                                border: isGranted ? '1.5px solid #a7f3d0' : '1px solid #cbd5e1',
-                                background: isGranted ? '#f0fdf4' : '#ffffff',
-                                fontSize: 12.5,
-                                fontWeight: 700,
-                                color: isGranted ? '#065f46' : '#475569',
-                                appearance: 'none',
-                                outline: 'none',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <option value="" disabled>
-                                {targetType === 'WORKER'
-                                  ? isWorkerInherited
-                                    ? isMr ? '🛡️ भूमिकेकडून (Worker Role)' : '🛡️ Via Worker Role'
-                                    : isWorkerDirect
-                                      ? isMr ? '👤 थेट परवाना (Direct)' : '👤 Direct Permission'
-                                      : isMr ? '⚪ दिलेली नाही (Not Assigned)' : '⚪ Not Assigned'
-                                  : isGranted
-                                    ? isMr
-                                      ? `✓ ${currentRole?.display_name || currentRole?.name} ला दिली आहे`
-                                      : `✓ Assigned to ${currentRole?.display_name || currentRole?.name}`
-                                    : isMr
-                                      ? '⚪ या भूमिकेस दिलेली नाही'
-                                      : '⚪ Not Assigned to this Role'}
-                              </option>
-
-                              {/* Action Options */}
-                              {targetType === 'ROLE' ? (
-                                <>
-                                  {isGranted ? (
-                                    <option value="REMOVE_CURRENT_ROLE">
-                                      {isMr ? '❌ या भूमिकेकडून काढा (Remove)' : '❌ Remove from this role'}
-                                    </option>
-                                  ) : (
-                                    <option value="GIVE_CURRENT_ROLE">
-                                      {isMr ? '➕ या भूमिकेस जोडा (Assign)' : '➕ Assign to this role'}
-                                    </option>
-                                  )}
-                                  <optgroup label={isMr ? 'इतर भूमिकांना जोडा' : 'Assign to other roles'}>
-                                    <option value="GIVE_WORKER_ROLE">👷 {isMr ? 'सर्व कार्यकर्ते' : 'All Field Workers'}</option>
-                                    <option value="GIVE_OFFICER_ROLE">👔 {isMr ? 'नेता / अधिकारी' : 'Leader / Officer'}</option>
-                                    <option value="GIVE_ADMIN_ROLE">👑 {isMr ? 'ॲडमिनिस्ट्रेटर' : 'Administrator'}</option>
-                                  </optgroup>
-                                </>
-                              ) : (
-                                <>
-                                  {isWorkerDirect ? (
-                                    <option value="REMOVE_CURRENT_ROLE">
-                                      {isMr ? '❌ थेट परवाना काढा' : '❌ Remove direct permission'}
-                                    </option>
-                                  ) : !isGranted ? (
-                                    <option value="GIVE_CURRENT_ROLE">
-                                      {isMr ? '➕ या कार्यकर्त्यास थेट द्या' : '➕ Grant direct permission'}
-                                    </option>
-                                  ) : null}
-                                </>
-                              )}
-
-                              <option value="CUSTOM_MODAL">
-                                ➕ {isMr ? 'विशिष्ट कार्यकर्त्यास जोडा...' : 'Assign to particular worker...'}
-                              </option>
-                            </select>
-                            <ChevronDown
-                              size={14}
-                              color={isGranted ? '#059669' : '#64748b'}
-                              style={{
-                                position: 'absolute',
-                                right: 10,
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                pointerEvents: 'none',
-                              }}
-                            />
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleAssignAction(perm.id, 'CUSTOM_MODAL')}
+                            style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              borderRadius: 8,
+                              border: isGranted ? '1.5px solid #a7f3d0' : '1px solid #cbd5e1',
+                              background: isGranted ? '#f0fdf4' : '#ffffff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              fontSize: 12.5,
+                              fontWeight: 700,
+                              color: isGranted ? '#065f46' : '#475569',
+                              cursor: 'pointer',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                              transition: 'all 0.15s ease',
+                              textAlign: 'left',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = '#3b82f6';
+                              e.currentTarget.style.background = isGranted ? '#ecfdf5' : '#eff6ff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = isGranted ? '#a7f3d0' : '#cbd5e1';
+                              e.currentTarget.style.background = isGranted ? '#f0fdf4' : '#ffffff';
+                            }}
+                            title={isMr ? 'सर्व वापरकर्ते पाहण्यासाठी व नियुक्तीसाठी क्लिक करा' : 'Click to view all users'}
+                          >
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {targetType === 'WORKER'
+                                ? isWorkerInherited
+                                  ? `🛡️ ${selectedWorker?.full_name || (isMr ? 'कार्यकर्ता' : 'Worker')}`
+                                  : isWorkerDirect
+                                    ? `👤 ${selectedWorker?.full_name || (isMr ? 'थेट परवाना' : 'Direct')}`
+                                    : (isMr ? '⚪ नियुक्त नाही' : '⚪ Not Assigned')
+                                : isGranted
+                                  ? `✓ ${currentRole?.display_name || currentRole?.name}`
+                                  : (isMr ? '⚪ या भूमिकेस नाही' : '⚪ Not Assigned')}
+                            </span>
+                            <span style={{ fontSize: 11, color: '#64748b', marginLeft: 6 }}>👥 ▾</span>
+                          </button>
 
                           {/* Role Badges Indicating who has access */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
@@ -1662,14 +1617,14 @@ export default function RolePermissionManager({
       </div>
 
       {/* ============================================================== */}
-      {/* 4. QUICK ASSIGN MODAL                                          */}
+      {/* 4. ALL USERS ASSIGNMENT MODAL (Click on Assigned To)         */}
       {/* ============================================================== */}
       {assignModal && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(15, 23, 42, 0.6)',
+            background: 'rgba(15, 23, 42, 0.65)',
             backdropFilter: 'blur(3px)',
             display: 'flex',
             alignItems: 'center',
@@ -1681,20 +1636,23 @@ export default function RolePermissionManager({
           <div
             style={{
               background: '#ffffff',
-              borderRadius: 14,
-              padding: '24px 22px',
-              maxWidth: 440,
+              borderRadius: 16,
+              padding: '24px',
+              maxWidth: 520,
               width: '100%',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
               border: '1px solid #e2e8f0',
               boxSizing: 'border-box',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>➕</span>
+                <span style={{ fontSize: 20 }}>👥</span>
                 <strong style={{ fontSize: 16, color: '#0f172a' }}>
-                  {isMr ? 'विशिष्ट कार्यकर्त्यास परवानगी द्या' : 'Assign Permission to Worker'}
+                  {isMr ? 'परवानगी व सर्व वापरकर्ते (All Users)' : 'Permission & All Users'}
                 </strong>
               </div>
               <button
@@ -1704,7 +1662,7 @@ export default function RolePermissionManager({
                 style={{
                   border: 'none',
                   background: 'none',
-                  fontSize: 16,
+                  fontSize: 18,
                   cursor: 'pointer',
                   color: '#94a3b8',
                   padding: 4,
@@ -1714,15 +1672,64 @@ export default function RolePermissionManager({
               </button>
             </div>
 
-            <p style={{ margin: '0 0 16px 0', fontSize: 13, color: '#64748b', lineHeight: 1.4 }}>
-              {isMr
-                ? `खालील कार्यकर्त्यास "${assignModal.permName}" ही परवानगी थेट दिली जाईल:`
-                : `Grant permission "${assignModal.permName}" directly to the selected worker:`}
-            </p>
+            <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>
+                {isMr ? 'निवडलेली परवानगी:' : 'Selected Permission:'}
+              </div>
+              <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e40af', marginTop: '2px' }}>
+                🔑 {assignModal.permName}
+              </div>
+            </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                {isMr ? 'कार्यकर्ता निवडा:' : 'Select Worker:'}
+            {/* Role Assignment Actions */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleAssignAction(assignModal.permId, 'GIVE_CURRENT_ROLE');
+                  setAssignModal(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '7px 12px',
+                  borderRadius: '8px',
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  color: '#1d4ed8',
+                  fontSize: '12px',
+                  fontWeight: '750',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                ➕ {isMr ? 'सध्याच्या भूमिकेस द्या' : 'Assign Current Role'}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleAssignAction(assignModal.permId, 'REMOVE_CURRENT_ROLE');
+                  setAssignModal(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '7px 12px',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#dc2626',
+                  fontSize: '12px',
+                  fontWeight: '750',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                ❌ {isMr ? 'सध्याच्या भूमिकेकडून काढा' : 'Remove from Role'}
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#334155', marginBottom: 6 }}>
+                {isMr ? 'वापरकर्ता निवडून थेट परवानगी द्या (सर्व वापरकर्ते):' : 'Select User to Assign Permission (All Users):'}
               </label>
               <select
                 className="clean-select-box"
@@ -1730,25 +1737,66 @@ export default function RolePermissionManager({
                 onChange={(e) => setAssignTargetUserId(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '9px 12px',
+                  padding: '10px 12px',
                   borderRadius: 8,
-                  border: '1px solid #cbd5e1',
+                  border: '1.5px solid #cbd5e1',
                   fontSize: 13,
+                  fontWeight: '600',
                   outline: 'none',
                   cursor: 'pointer',
+                  background: '#ffffff',
                 }}
               >
-                {fieldWorkers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    👤 {u.full_name} (Field Worker · 📞 {u.phone || 'N/A'})
-                  </option>
-                ))}
-                {otherUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    👤 {u.full_name} ({u.roles?.map((r) => r.name).join(', ')})
-                  </option>
-                ))}
+                <optgroup label={isMr ? '👷 क्षेत्रीय कार्यकर्ते (Field Workers)' : 'Field Workers'}>
+                  {fieldWorkers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      👤 {u.full_name} (Field Worker · 📞 {u.phone || 'N/A'})
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label={isMr ? '👔 नेते व अधिकारी (Officers & Admins)' : 'Officers & Admins'}>
+                  {otherUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      👤 {u.full_name} ({u.roles?.map((r) => r.name).join(', ') || 'Officer'} · 📞 {u.phone || 'N/A'})
+                    </option>
+                  ))}
+                </optgroup>
               </select>
+            </div>
+
+            {/* Quick User List Preview */}
+            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '200px', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '6px', marginBottom: '16px', background: '#f8fafc' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', padding: '4px 8px', textTransform: 'uppercase' }}>
+                {isMr ? 'नोंदणीकृत सर्व वापरकर्ते:' : 'Registered Users:'} ({usersList.length})
+              </div>
+              {usersList.map((u) => (
+                <div
+                  key={u.id}
+                  onClick={() => setAssignTargetUserId(String(u.id))}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    background: String(assignTargetUserId) === String(u.id) ? '#eff6ff' : '#ffffff',
+                    border: String(assignTargetUserId) === String(u.id) ? '1px solid #3b82f6' : '1px solid #f1f5f9',
+                    marginBottom: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px' }}>👤</span>
+                    <div>
+                      <div style={{ fontSize: '12.5px', fontWeight: '750', color: '#0f172a' }}>{u.full_name}</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>📞 {u.phone || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#f1f5f9', color: '#475569', fontWeight: '700' }}>
+                    {u.roles?.map((r) => r.display_name || r.name).join(', ') || 'User'}
+                  </span>
+                </div>
+              ))}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
@@ -1757,8 +1805,8 @@ export default function RolePermissionManager({
                 className="clean-btn"
                 onClick={() => setAssignModal(null)}
                 style={{
-                  padding: '8px 14px',
-                  borderRadius: 6,
+                  padding: '9px 16px',
+                  borderRadius: 8,
                   border: '1px solid #cbd5e1',
                   background: '#ffffff',
                   color: '#475569',
@@ -1773,20 +1821,20 @@ export default function RolePermissionManager({
                 type="button"
                 className="clean-btn"
                 onClick={handleQuickAssignToWorker}
-                disabled={isAssigning}
+                disabled={isAssigning || !assignTargetUserId}
                 style={{
-                  padding: '8px 18px',
-                  borderRadius: 6,
+                  padding: '9px 20px',
+                  borderRadius: 8,
                   border: 'none',
-                  background: '#16a34a',
+                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
                   color: '#ffffff',
                   fontSize: 13,
-                  fontWeight: 750,
+                  fontWeight: 800,
                   cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(22, 163, 74, 0.3)',
+                  boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)',
                 }}
               >
-                {isAssigning ? '...' : (isMr ? '＋ परवानगी द्या' : '＋ Grant Permission')}
+                {isAssigning ? '...' : (isMr ? '＋ निवडलेल्या वापरकर्त्यास द्या' : '＋ Grant to Selected User')}
               </button>
             </div>
           </div>

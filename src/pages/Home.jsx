@@ -97,7 +97,7 @@ function Home() {
                 </div>
                 <div>
                   <h1 style={{ margin: '0 0 4px 0', fontSize: '28px', fontWeight: '900', letterSpacing: '-0.5px' }}>
-                    Intelligence Mechanism
+                    Intelligent MaKanisms
                   </h1>
                   <span style={{ fontSize: '12px', color: '#fbbf24', fontWeight: '750', letterSpacing: '0.4px', textTransform: 'uppercase' }}>
                     AI-Driven Political Operations Platform

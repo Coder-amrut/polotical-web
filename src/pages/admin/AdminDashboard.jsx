@@ -19,11 +19,20 @@ import ElectionAnalysisWorkbench from './ElectionAnalysisWorkbench';
 import MatdanYadiManager from '../../components/MatdanYadiManager';
 import ElectionPrabhariManager from './ElectionPrabhariManager';
 import UsersAiPermissionManager from './UsersAiPermissionManager';
+import UserManagementHub from './UserManagementHub';
 import { translateTree } from '../../i18n/adminTranslations';
 import adminBannerBg from '../../assets/admin_banner_bg.png';
 
 // Crisp SVGs matching Neta platform design language
 const icons = {
+  users_hub: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
   prabhari: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -380,7 +389,7 @@ function Button({ children, onClick, secondary = false, variant = 'primary', dis
   );
 }
 
-function Field({ label, value, onChange, required = false, type = 'text', placeholder = '' }) {
+function Field({ label, value, onChange, required = false, type = 'text', placeholder = '', autoComplete = 'off' }) {
   return (
     <label style={styles.label}>
       {label}
@@ -389,6 +398,7 @@ function Field({ label, value, onChange, required = false, type = 'text', placeh
         type={type}
         value={value}
         placeholder={placeholder}
+        autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
         style={styles.input}
       />
@@ -510,6 +520,14 @@ function AdminDashboard() {
             label_mr: 'डॅशबोर्ड सारांश',
             label_en: 'Overview',
             iconKey: 'overview',
+          },
+          {
+            id: 'users_hub',
+            label_mr: 'User (वापरकर्ते वर्गीकरण)',
+            label_en: 'User Management',
+            iconKey: 'users_hub',
+            badge: 'NEW',
+            badgeTheme: 'blue',
           },
           {
             id: 'accounts',
@@ -1486,6 +1504,15 @@ function AdminDashboard() {
       );
     }
 
+    if (active === 'users_hub') {
+      return (
+        <UserManagementHub
+          isMr={isMr}
+          onNavigateToCreate={() => setActive('accounts')}
+        />
+      );
+    }
+
     if (active === 'accounts') {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
@@ -1518,11 +1545,38 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <form onSubmit={createUser}>
-                <Field label={isMr ? 'पूर्ण नाव *' : 'Full Name *'} required value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
-                <Field label={isMr ? 'मोबाईल नंबर *' : 'Phone *'} required value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-                <Field label={isMr ? 'ईमेल' : 'Email'} type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
-                <Field label={isMr ? 'पासवर्ड *' : 'Temporary Password *'} type="password" required value={form.password} onChange={(v) => setForm({ ...form, password: v })} />
+              <form onSubmit={createUser} autoComplete="off">
+                <Field
+                  label={isMr ? 'पूर्ण नाव *' : 'Full Name *'}
+                  placeholder={isMr ? 'उदा. सचिन पाटील' : 'e.g. Sachin Patil'}
+                  required
+                  value={form.full_name}
+                  onChange={(v) => setForm({ ...form, full_name: v })}
+                />
+                <Field
+                  label={isMr ? 'मोबाईल नंबर *' : 'Phone *'}
+                  placeholder={isMr ? '१० अंकी मोबाईल नंबर (उदा. 9822012345)' : '10-digit phone number'}
+                  required
+                  value={form.phone}
+                  onChange={(v) => setForm({ ...form, phone: v })}
+                />
+                <Field
+                  label={isMr ? 'ईमेल' : 'Email'}
+                  type="email"
+                  placeholder={isMr ? 'वापरकर्त्याचा ईमेल पत्ता (उदा. user@example.com)' : 'user@example.com'}
+                  autoComplete="off"
+                  value={form.email}
+                  onChange={(v) => setForm({ ...form, email: v })}
+                />
+                <Field
+                  label={isMr ? 'पासवर्ड *' : 'Temporary Password *'}
+                  type="password"
+                  placeholder={isMr ? 'तात्पुरता पासवर्ड टाका (उदा. Pass@123)' : 'Enter temporary password (e.g. Pass@123)'}
+                  autoComplete="new-password"
+                  required
+                  value={form.password}
+                  onChange={(v) => setForm({ ...form, password: v })}
+                />
                 <label style={styles.label}>
                   {isMr ? 'भूमिका' : 'Role'}
                   <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} style={styles.input}>
@@ -3030,7 +3084,7 @@ function AdminDashboard() {
                         letterSpacing: '-0.01em',
                       }}
                     >
-                      Intelligence Mechanism
+                      Intelligent MaKanisms
                     </div>
                     <div
                       style={{
@@ -3537,7 +3591,7 @@ function AdminDashboard() {
                   <img src="/logo.png" alt="Intelligent MaKanisms Logo" style={{ width: '38px', height: '38px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.2))', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      Intelligence Mechanism
+                      Intelligent MaKanisms
                     </div>
                     <h2 style={{ margin: 0, fontSize: '16.5px', fontWeight: '800', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {isMr ? currentNav.label_mr : currentNav.label_en}

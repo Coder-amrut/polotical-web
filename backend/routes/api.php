@@ -164,6 +164,13 @@ Route::prefix('admin')
         // POST /api/admin/users  (admin-created Worker/Officer)
         Route::post('/users', [AdminUserController::class, 'store']);
 
+        // User Management Hub endpoints
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::put('/users/{id}/role', [AdminUserController::class, 'updateRole'])->whereNumber('id');
+        Route::put('/users/{id}/status', [AdminUserController::class, 'updateStatus'])->whereNumber('id');
+        Route::post('/users/{id}/reset-password', [AdminUserController::class, 'resetPassword'])->whereNumber('id');
+        Route::delete('/users/{id}', [AdminUserController::class, 'destroy'])->whereNumber('id');
+
         // ---------------------------------------------------------------------------
         // Project Management — Phase 2
         // ---------------------------------------------------------------------------
