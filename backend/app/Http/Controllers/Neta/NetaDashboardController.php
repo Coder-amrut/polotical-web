@@ -2712,6 +2712,203 @@ class NetaDashboardController extends Controller
     }
 
     /**
+     * POST /api/voter-list/village
+     * Add or update a single village with population and voter counts in `villages` table.
+     */
+    public function storeVillage(Request $request)
+    {
+        $villageName = trim((string) $request->input('village_name'));
+        if (empty($villageName)) {
+            return response()->json(['success' => false, 'message' => 'गावाचे नाव (Village Name) आवश्यक आहे.'], 422);
+        }
+
+        $population = max(0, (int) $request->input('population', 0));
+        $totalVoters = max(0, (int) $request->input('total_voters', 0));
+        $district = trim((string) $request->input('district', 'सांगली')) ?: 'सांगली';
+        $taluka = trim((string) $request->input('taluka', 'मिरज')) ?: 'मिरज';
+        $code = trim((string) $request->input('village_code'));
+
+        if (empty($code)) {
+            $code = 'VIL_' . strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $villageName), 0, 4)) . rand(1000, 9999);
+        }
+
+        $existing = DB::table('villages')
+            ->where('village_code', $code)
+            ->orWhere(function ($q) use ($villageName, $district) {
+                $q->where('village_name', $villageName)
+                  ->where('district_code', $district);
+            })
+            ->first();
+
+        if ($existing) {
+            DB::table('villages')->where('id', $existing->id)->update([
+                'population'   => $population,
+                'total_voters' => $totalVoters,
+                'taluka_code'  => $taluka,
+                'district_code'=> $district,
+            ]);
+            $villageId = $existing->id;
+            $msg = "गाव '{$villageName}' ची लोकसंख्या ({$population}) व मतदार संख्या ({$totalVoters}) यशस्वीरीत्या अद्ययावत केली.";
+        } else {
+            $villageId = DB::table('villages')->insertGetId([
+                'district_code' => $district,
+                'taluka_code'   => $taluka,
+                'village_code'  => $code,
+                'village_name'  => $villageName,
+                'population'    => $population,
+                'total_voters'  => $totalVoters,
+            ]);
+            $msg = "नवीन गाव '{$villageName}' (लोकसंख्या: {$population}, मतदार: {$totalVoters}) यशस्वीरीत्या डेटाबेसमध्ये जोडले गेले.";
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $msg,
+            'data'    => [
+                'id'           => $villageId,
+                'village_code' => $code,
+                'village_name' => $villageName,
+                'taluka_name'  => $taluka,
+                'district_name'=> $district,
+                'population'   => $population,
+                'total_voters' => $totalVoters,
+            ],
+        ]);
+    }
+
+    /**
+     * POST /api/voter-list/upload-village-pdf
+     * Upload an official village population/voter PDF, extract text & save records to database.
+     */
+    public function uploadVillagePdf(Request $request)
+    {
+        $parsedRows = [];
+        $savedPath = null;
+        $fileName = null;
+
+        if ($request->hasFile('pdf_file')) {
+            $file = $request->file('pdf_file');
+            $fileName = $file->getClientOriginalName();
+            $savedPath = $file->storeAs('village_reports', time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $fileName), 'public');
+
+            $fullPath = storage_path('app/public/' . $savedPath);
+            if (file_exists($fullPath)) {
+                $rawContent = file_get_contents($fullPath);
+                $extractedText = '';
+
+                if (preg_match_all('/stream[\r\n]+(.*?)[\r\n]+endstream/s', $rawContent, $matches)) {
+                    foreach ($matches[1] as $stream) {
+                        $decompressed = @gzuncompress($stream);
+                        $streamData = $decompressed !== false ? $decompressed : $stream;
+                        if (preg_match_all('/\((.*?)\)\s*Tj/s', $streamData, $textMatches)) {
+                            $extractedText .= ' ' . implode(' ', $textMatches[1]);
+                        }
+                        if (preg_match_all('/\[(.*?)\]\s*TJ/s', $streamData, $tjMatches)) {
+                            foreach ($tjMatches[1] as $tj) {
+                                if (preg_match_all('/\((.*?)\)/s', $tj, $subMatches)) {
+                                    $extractedText .= ' ' . implode('', $subMatches[1]);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (empty(trim($extractedText))) {
+                    $extractedText = preg_replace('/[^a-zA-Z0-9\x{0900}-\x{097F}\s,.:\-]/u', ' ', $rawContent);
+                }
+
+                if (preg_match_all('/(?:गाव|Village|Gram Panchayat)[\s:]+([^\d\n,]+)[,\s\|]+(?:लोकसंख्या|Population)[\s:]+(\d+)[,\s\|]+(?:मतदार|Voters)[\s:]+(\d+)/ui', $extractedText, $rowMatches, PREG_SET_ORDER)) {
+                    foreach ($rowMatches as $rm) {
+                        $parsedRows[] = [
+                            'village_name' => trim($rm[1]),
+                            'population'   => (int) $rm[2],
+                            'total_voters' => (int) $rm[3],
+                        ];
+                    }
+                }
+            }
+        }
+
+        $inputRows = $request->input('villages', []);
+        if (is_array($inputRows) && count($inputRows) > 0) {
+            foreach ($inputRows as $ir) {
+                if (!empty($ir['village_name'])) {
+                    $parsedRows[] = [
+                        'village_name' => trim($ir['village_name']),
+                        'population'   => max(0, (int) ($ir['population'] ?? 0)),
+                        'total_voters' => max(0, (int) ($ir['total_voters'] ?? 0)),
+                        'district'     => $ir['district'] ?? ($request->input('district') ?: 'सांगली'),
+                        'taluka'       => $ir['taluka'] ?? ($request->input('taluka') ?: 'मिरज'),
+                    ];
+                }
+            }
+        }
+
+        if (empty($parsedRows) && $request->filled('village_name')) {
+            $parsedRows[] = [
+                'village_name' => trim($request->input('village_name')),
+                'population'   => max(0, (int) $request->input('population', 0)),
+                'total_voters' => max(0, (int) $request->input('total_voters', 0)),
+                'district'     => $request->input('district') ?: 'सांगली',
+                'taluka'       => $request->input('taluka') ?: 'मिरज',
+            ];
+        }
+
+        if (empty($parsedRows)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'PDF मधून गाव किंवा मतदार डेटा प्राप्त होऊ शकला नाही. कृपया गावाचे नाव व लोकसंख्या प्रविष्ट करा.',
+                'file_name' => $fileName,
+            ], 422);
+        }
+
+        $defaultDistrict = $request->input('district') ?: 'सांगली';
+        $defaultTaluka = $request->input('taluka') ?: 'मिरज';
+        $savedCount = 0;
+
+        foreach ($parsedRows as $row) {
+            $vName = $row['village_name'];
+            $vPop = (int) $row['population'];
+            $vVoters = (int) $row['total_voters'];
+            $vDist = $row['district'] ?? $defaultDistrict;
+            $vTal = $row['taluka'] ?? $defaultTaluka;
+            $code = 'VIL_' . strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $vName), 0, 4)) . rand(1000, 9999);
+
+            $existing = DB::table('villages')
+                ->where('village_name', $vName)
+                ->where('district_code', $vDist)
+                ->first();
+
+            if ($existing) {
+                DB::table('villages')->where('id', $existing->id)->update([
+                    'population'   => $vPop > 0 ? $vPop : $existing->population,
+                    'total_voters' => $vVoters > 0 ? $vVoters : $existing->total_voters,
+                    'taluka_code'  => $vTal,
+                ]);
+            } else {
+                DB::table('villages')->insert([
+                    'district_code' => $vDist,
+                    'taluka_code'   => $vTal,
+                    'village_code'  => $code,
+                    'village_name'  => $vName,
+                    'population'    => $vPop,
+                    'total_voters'  => $vVoters,
+                ]);
+            }
+            $savedCount++;
+        }
+
+        return response()->json([
+            'success'     => true,
+            'message'     => "PDF अहवालातून {$savedCount} गावांची लोकसंख्या व मतदार संख्या यशस्वीरीत्या डेटाबेसमध्ये सेव्ह केली गेली.",
+            'count'       => $savedCount,
+            'file_name'   => $fileName,
+            'saved_path'  => $savedPath,
+            'data'        => $parsedRows,
+        ]);
+    }
+
+    /**
      * GET /api/election-prabharis
      * Get election prabharis hierarchy list with stats
      */

@@ -390,6 +390,8 @@ Route::get('/voters-list', [NetaDashboardController::class, 'votersList']);
 Route::post('/voters-list', [NetaDashboardController::class, 'storeVoter']);
 Route::post('/voters-list/upload', [NetaDashboardController::class, 'uploadVoters']);
 Route::get('/voter-list/village-statistics', [NetaDashboardController::class, 'getVillageStatistics']);
+Route::post('/voter-list/village', [NetaDashboardController::class, 'storeVillage']);
+Route::post('/voter-list/upload-village-pdf', [NetaDashboardController::class, 'uploadVillagePdf']);
 Route::get('/voter-list/booths-directory', [NetaDashboardController::class, 'getBoothsDirectory']);
 Route::get('/geography-filters', [NetaDashboardController::class, 'geographyFilters']);
 Route::get('/booths', [NetaDashboardController::class, 'booths']);

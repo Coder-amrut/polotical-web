@@ -549,6 +549,20 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
   const [uploadTargetBooth, setUploadTargetBooth] = useState('१');
   const [uploadFileName, setUploadFileName] = useState('');
 
+  // Add Village, Population & Voters Modal State (Manual & PDF Upload)
+  const [showAddVillageModal, setShowAddVillageModal] = useState(false);
+  const [villageModalTab, setVillageModalTab] = useState('manual'); // 'manual' | 'pdf'
+  const [villageForm, setVillageForm] = useState({
+    village_name: '',
+    district: 'सांगली',
+    taluka: 'मिरज',
+    population: '',
+    total_voters: '',
+    village_code: '',
+  });
+  const [villagePdfFile, setVillagePdfFile] = useState(null);
+  const [villageSubmitting, setVillageSubmitting] = useState(false);
+
   // New Single Voter Form
   const [newVoter, setNewVoter] = useState({
     epic_no: '',
@@ -1218,6 +1232,99 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
     showToast(isMr ? '✓ मतदान यादी CSV डाऊनलोड झाली!' : '✓ Voter list exported to CSV!');
   };
 
+  // Add Village & Population (Manual Entry)
+  const handleSaveVillageManual = async (e) => {
+    e.preventDefault();
+    if (!villageForm.village_name.trim()) {
+      showToast(isMr ? 'कृपया गावाचे नाव टाका.' : 'Please enter village name.');
+      return;
+    }
+    const pop = parseInt(villageForm.population, 10) || 0;
+    const voters = parseInt(villageForm.total_voters, 10) || 0;
+    if (pop <= 0) {
+      showToast(isMr ? 'कृपया वैध लोकसंख्या टाका.' : 'Please enter valid population.');
+      return;
+    }
+    if (voters > pop) {
+      if (!window.confirm(isMr ? 'मतदार संख्या एकूण लोकसंख्येपेक्षा जास्त आहे. तरीही सेव्ह करायचे का?' : 'Voters exceed total population. Continue?')) {
+        return;
+      }
+    }
+    setVillageSubmitting(true);
+    try {
+      const res = await apiClient.post('/voter-list/village', {
+        village_name: villageForm.village_name.trim(),
+        district: villageForm.district || selectedDistrict || 'सांगली',
+        taluka: villageForm.taluka || (selectedTaluka && selectedTaluka !== 'all' ? selectedTaluka : 'मिरज'),
+        population: pop,
+        total_voters: voters,
+        village_code: villageForm.village_code ? villageForm.village_code.trim() : '',
+      });
+      if (res.data?.success) {
+        showToast(res.data.message || (isMr ? 'गाव व मतदार डेटा सेव्ह झाला!' : 'Village saved!'));
+        setShowAddVillageModal(false);
+        setVillageForm({
+          village_name: '',
+          district: selectedDistrict || 'सांगली',
+          taluka: selectedTaluka && selectedTaluka !== 'all' ? selectedTaluka : 'मिरज',
+          population: '',
+          total_voters: '',
+          village_code: '',
+        });
+        setActiveViewMode('villages');
+        fetchVillageStats();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || (isMr ? 'गाव जोडताना त्रुटी आली.' : 'Error saving village.'));
+    } finally {
+      setVillageSubmitting(false);
+    }
+  };
+
+  // Add Village & Population via PDF Upload
+  const handleSaveVillagePdf = async (e) => {
+    e.preventDefault();
+    if (!villagePdfFile && !villageForm.village_name.trim()) {
+      showToast(isMr ? 'कृपया PDF फाइल निवडा किंवा गावाचे नाव टाका.' : 'Please select PDF file or enter village name.');
+      return;
+    }
+    setVillageSubmitting(true);
+    try {
+      const formData = new FormData();
+      if (villagePdfFile) {
+        formData.append('pdf_file', villagePdfFile);
+      }
+      formData.append('village_name', villageForm.village_name.trim());
+      formData.append('district', villageForm.district || selectedDistrict || 'सांगली');
+      formData.append('taluka', villageForm.taluka || (selectedTaluka && selectedTaluka !== 'all' ? selectedTaluka : 'मिरज'));
+      formData.append('population', villageForm.population || 0);
+      formData.append('total_voters', villageForm.total_voters || 0);
+
+      const res = await apiClient.post('/voter-list/upload-village-pdf', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data?.success) {
+        showToast(res.data.message || (isMr ? 'PDF अहवालातून गाव व मतदार डेटा सेव्ह झाला!' : 'Village data saved from PDF!'));
+        setShowAddVillageModal(false);
+        setVillagePdfFile(null);
+        setVillageForm({
+          village_name: '',
+          district: selectedDistrict || 'सांगली',
+          taluka: selectedTaluka && selectedTaluka !== 'all' ? selectedTaluka : 'मिरज',
+          population: '',
+          total_voters: '',
+          village_code: '',
+        });
+        setActiveViewMode('villages');
+        fetchVillageStats();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || (isMr ? 'PDF अपलोड करताना त्रुटी आली.' : 'Error uploading PDF.'));
+    } finally {
+      setVillageSubmitting(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', boxSizing: 'border-box' }}>
       {/* Toast Alert */}
@@ -1333,6 +1440,36 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
           >
             <Plus size={16} />
             <span>{isMr ? 'नवीन मतदार नोंद' : 'Add Single Voter'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setVillageForm((prev) => ({
+                ...prev,
+                district: selectedDistrict || 'सांगली',
+                taluka: selectedTaluka && selectedTaluka !== 'all' ? selectedTaluka : 'मिरज',
+              }));
+              setShowAddVillageModal(true);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '10px 15px',
+              borderRadius: '10px',
+              background: '#ffffff',
+              color: '#065f46',
+              border: 'none',
+              fontWeight: '800',
+              fontSize: '13px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span>🏘️</span>
+            <span>{isMr ? 'गाव व लोकसंख्या जोडा (PDF/थेट)' : 'Add Village & Population (PDF)'}</span>
           </button>
 
           <button
@@ -1974,6 +2111,33 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVillageForm((prev) => ({
+                          ...prev,
+                          district: selectedDistrict || 'सांगली',
+                          taluka: selectedTaluka && selectedTaluka !== 'all' ? selectedTaluka : 'मिरज',
+                        }));
+                        setShowAddVillageModal(true);
+                      }}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: '#ffffff',
+                        color: '#065f46',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                      }}
+                    >
+                      ➕ {isMr ? 'नवीन गाव व लोकसंख्या जोडा (PDF/थेट)' : 'Add Village & Population (PDF)'}
+                    </button>
                     <button
                       type="button"
                       onClick={() => fetchVillageStats()}
@@ -2810,6 +2974,346 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
                 {isMr ? 'बंद करा' : 'Close'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 3: ADD VILLAGE, POPULATION & VOTERS (MANUAL & PDF UPLOAD) */}
+      {/* ============================================================== */}
+      {showAddVillageModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => !villageSubmitting && setShowAddVillageModal(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '560px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#ecfdf5', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                  🏘️
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0f172a' }}>
+                    {isMr ? 'गाव, लोकसंख्या व मतदार नोंदणी' : 'Add Village, Population & Voters'}
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    {isMr ? 'थेट फॉर्मद्वारे किंवा PDF अहवाल अपलोड करून DB मध्ये जोडा' : 'Manual entry or official PDF report import to database'}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !villageSubmitting && setShowAddVillageModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Mode Switcher Tabs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setVillageModalTab('manual')}
+                style={{
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: villageModalTab === 'manual' ? '#ffffff' : 'transparent',
+                  color: villageModalTab === 'manual' ? '#047857' : '#64748b',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  boxShadow: villageModalTab === 'manual' ? '0 2px 4px rgba(0,0,0,0.08)' : 'none',
+                }}
+              >
+                ✍️ {isMr ? '१. थेट माहिती भरा' : '1. Manual Entry'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setVillageModalTab('pdf')}
+                style={{
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: villageModalTab === 'pdf' ? '#ffffff' : 'transparent',
+                  color: villageModalTab === 'pdf' ? '#047857' : '#64748b',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  boxShadow: villageModalTab === 'pdf' ? '0 2px 4px rgba(0,0,0,0.08)' : 'none',
+                }}
+              >
+                📄 {isMr ? '२. PDF अहवाल अपलोड' : '2. PDF Upload'}
+              </button>
+            </div>
+
+            {/* TAB 1: MANUAL ENTRY FORM */}
+            {villageModalTab === 'manual' ? (
+              <form onSubmit={handleSaveVillageManual} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                    {isMr ? 'गावाचे नाव (Village Name) *' : 'Village Name *'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={isMr ? 'उदा. कवठे एकंद, माधवनगर, बांबवडे' : 'e.g. Kavathe Ekand'}
+                    value={villageForm.village_name}
+                    onChange={(e) => setVillageForm({ ...villageForm, village_name: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                      {isMr ? 'जिल्हा (District) *' : 'District *'}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="उदा. सांगली"
+                      value={villageForm.district}
+                      onChange={(e) => setVillageForm({ ...villageForm, district: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                      {isMr ? 'तालुका (Taluka) *' : 'Taluka *'}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="उदा. मिरज, तासगाव"
+                      value={villageForm.taluka}
+                      onChange={(e) => setVillageForm({ ...villageForm, taluka: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                      {isMr ? 'एकूण लोकसंख्या (Population) *' : 'Total Population *'}
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="उदा. 12500"
+                      value={villageForm.population}
+                      onChange={(e) => setVillageForm({ ...villageForm, population: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#047857', marginBottom: '4px' }}>
+                      {isMr ? 'त्यामधील मतदार संख्या (Voters) *' : 'Voters in Population *'}
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      placeholder="उदा. 8900"
+                      value={villageForm.total_voters}
+                      onChange={(e) => setVillageForm({ ...villageForm, total_voters: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #a7f3d0', background: '#f0fdf4', fontSize: '13px', boxSizing: 'border-box', fontWeight: '700', color: '#065f46' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Calculation Ratio Badge */}
+                {Boolean(villageForm.population && villageForm.total_voters) && (
+                  <div style={{ background: '#ecfdf5', padding: '10px 14px', borderRadius: '8px', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: '#065f46', fontWeight: '600' }}>
+                      📊 {isMr ? 'अपेक्षित मतदार प्रमाण:' : 'Voter-to-Population Ratio:'}
+                    </span>
+                    <span style={{ fontWeight: '800', color: '#047857', background: '#ffffff', padding: '2px 8px', borderRadius: '6px' }}>
+                      {Math.round((parseInt(villageForm.total_voters, 10) / parseInt(villageForm.population, 10)) * 100)}% नागरिक मतदार
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                    {isMr ? 'गाव कोड (LGD / Census Code - ऐच्छिक)' : 'Village LGD / Census Code (Optional)'}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="उदा. 568120 (नसल्यास सिस्टीम आपोआप तयार करेल)"
+                    value={villageForm.village_code}
+                    onChange={(e) => setVillageForm({ ...villageForm, village_code: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddVillageModal(false)}
+                    style={{ padding: '9px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    {isMr ? 'रद्द करा' : 'Cancel'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={villageSubmitting}
+                    style={{
+                      padding: '9px 20px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                      color: '#ffffff',
+                      fontWeight: '800',
+                      cursor: villageSubmitting ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)',
+                    }}
+                  >
+                    {villageSubmitting ? '...' : isMr ? '💾 डेटाबेसमध्ये सेव्ह करा' : 'Save Village to DB'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* TAB 2: PDF UPLOAD FORM */
+              <form onSubmit={handleSaveVillagePdf} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div
+                  style={{
+                    border: '2px dashed #059669',
+                    borderRadius: '12px',
+                    padding: '24px 16px',
+                    textAlign: 'center',
+                    background: '#f0fdf4',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => document.getElementById('village_pdf_input')?.click()}
+                >
+                  <input
+                    id="village_pdf_input"
+                    type="file"
+                    accept=".pdf"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        setVillagePdfFile(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>📄</div>
+                  <div style={{ fontWeight: '800', fontSize: '14px', color: '#065f46' }}>
+                    {villagePdfFile ? villagePdfFile.name : (isMr ? 'येथे अधिकृत PDF अहवाल अपलोड करा' : 'Select Official PDF Report')}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#047857', marginTop: '4px' }}>
+                    {villagePdfFile
+                      ? `${(villagePdfFile.size / 1024).toFixed(1)} KB निवडले`
+                      : (isMr ? 'ग्रामपंचायत जनगणना अहवाल किंवा निवडणूक मतदार यादी PDF' : 'Census or Electoral Roll Summary PDF')}
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '8px' }}>
+                    {isMr ? 'गाव व लोकसंख्या तपशील (तपासणी किंवा सुधारणा):' : 'Confirm Village & Population Details:'}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '3px' }}>गावाचे नाव *</label>
+                      <input
+                        type="text"
+                        placeholder="उदा. माधवनगर"
+                        value={villageForm.village_name}
+                        onChange={(e) => setVillageForm({ ...villageForm, village_name: e.target.value })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '3px' }}>तालुका</label>
+                      <input
+                        type="text"
+                        value={villageForm.taluka}
+                        onChange={(e) => setVillageForm({ ...villageForm, taluka: e.target.value })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '3px' }}>एकूण लोकसंख्या</label>
+                      <input
+                        type="number"
+                        placeholder="उदा. 15000"
+                        value={villageForm.population}
+                        onChange={(e) => setVillageForm({ ...villageForm, population: e.target.value })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>मतदार संख्या</label>
+                      <input
+                        type="number"
+                        placeholder="उदा. 10200"
+                        value={villageForm.total_voters}
+                        onChange={(e) => setVillageForm({ ...villageForm, total_voters: e.target.value })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '12.5px', boxSizing: 'border-box', fontWeight: '700', color: '#065f46' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddVillageModal(false)}
+                    style={{ padding: '9px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    {isMr ? 'रद्द करा' : 'Cancel'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={villageSubmitting}
+                    style={{
+                      padding: '9px 20px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                      color: '#ffffff',
+                      fontWeight: '800',
+                      cursor: villageSubmitting ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)',
+                    }}
+                  >
+                    {villageSubmitting ? '...' : isMr ? '🚀 PDF अपलोड करा व DB मध्ये सेव्ह करा' : 'Upload PDF & Save to DB'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
