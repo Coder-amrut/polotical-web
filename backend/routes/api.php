@@ -378,11 +378,17 @@ Route::prefix('worker')->group(function () {
     });
 });
 
-// Direct & Dynamic Voter List and Geography Routes for Web & Admin
+// Direct & Dynamic Voter List, Booths and Election Prabhari Routes
 Route::get('/voters-list', [NetaDashboardController::class, 'votersList']);
 Route::post('/voters-list', [NetaDashboardController::class, 'storeVoter']);
 Route::post('/voters-list/upload', [NetaDashboardController::class, 'uploadVoters']);
 Route::get('/geography-filters', [NetaDashboardController::class, 'geographyFilters']);
+Route::get('/booths', [NetaDashboardController::class, 'booths']);
+Route::get('/election-prabharis', [NetaDashboardController::class, 'getElectionPrabharis']);
+Route::post('/election-prabharis', [NetaDashboardController::class, 'storeElectionPrabhari']);
+Route::put('/election-prabharis/{id}', [NetaDashboardController::class, 'updateElectionPrabhari'])->whereNumber('id');
+Route::delete('/election-prabharis/{id}', [NetaDashboardController::class, 'deleteElectionPrabhari'])->whereNumber('id');
+Route::get('/elections-list', [NetaDashboardController::class, 'getElectionsList']);
 
 
 

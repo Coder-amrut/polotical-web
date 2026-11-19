@@ -520,6 +520,7 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
   const [dbDistricts, setDbDistricts] = useState([]);
   const [dbTalukas, setDbTalukas] = useState([]);
   const [dbVillages, setDbVillages] = useState([]);
+  const [dbBooths, setDbBooths] = useState([]);
   const [loadingGeo, setLoadingGeo] = useState(false);
   const [loadingVoters, setLoadingVoters] = useState(false);
 
@@ -659,6 +660,28 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
     fetchVillages();
   }, [selectedDistrict, selectedTaluka]);
 
+  // 4. Fetch Official Polling Booths from Database when Area/Taluka changes
+  useEffect(() => {
+    if (!selectedDistrict) {
+      setDbBooths([]);
+      return;
+    }
+    const fetchBooths = async () => {
+      try {
+        const params = { district: selectedDistrict };
+        if (selectedTaluka && selectedTaluka !== 'all') params.taluka = selectedTaluka;
+        if (selectedVillage && selectedVillage !== 'all') params.village = selectedVillage;
+        const res = await apiClient.get('/booths', { params });
+        if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+          setDbBooths(res.data.data);
+        }
+      } catch (err) {
+        console.log('Booths DB query fallback:', err);
+      }
+    };
+    fetchBooths();
+  }, [selectedDistrict, selectedTaluka, selectedVillage]);
+
   // -------------------------------------------------------------
   // Dynamic Cascading Options with DB Priority + Master Catalog Fallback
   // -------------------------------------------------------------
@@ -694,15 +717,23 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
     return Array.from(new Set([...list, ...fromVoters])).sort();
   }, [selectedDistrict, selectedTaluka, dbVillages, voters]);
 
-  // Booths computed for selected area
+  // Booths computed directly from Database + Loaded Voters
   const availableBooths = useMemo(() => {
     if (!selectedDistrict) return [];
+    const fromDb = (dbBooths || []).map((b) => (b.booth_no || '').replace('बूथ क्र. ', '').trim()).filter(Boolean);
     let list = voters.filter((v) => v.district === selectedDistrict);
     if (selectedTaluka && selectedTaluka !== 'all') list = list.filter((v) => v.taluka === selectedTaluka);
     if (selectedVillage && selectedVillage !== 'all') list = list.filter((v) => v.village === selectedVillage);
-    const booths = Array.from(new Set(list.map((v) => v.booth_no).filter(Boolean))).sort((a, b) => Number(a) - Number(b));
-    return booths.length > 0 ? booths : ['१', '२', '३', '४', '५'];
-  }, [voters, selectedDistrict, selectedTaluka, selectedVillage]);
+    const fromVoters = list.map((v) => String(v.booth_no || '').replace('बूथ क्र. ', '').trim()).filter(Boolean);
+    const combined = Array.from(new Set([...fromDb, ...fromVoters]))
+      .filter(Boolean)
+      .sort((a, b) => {
+        const numA = parseInt(a.replace(/[^\d]/g, ''), 10) || 0;
+        const numB = parseInt(b.replace(/[^\d]/g, ''), 10) || 0;
+        return numA - numB;
+      });
+    return combined.length > 0 ? combined : ['१', '२', '३', '४', '५', '६', '७', '८', '९', '१०'];
+  }, [dbBooths, voters, selectedDistrict, selectedTaluka, selectedVillage]);
 
   // Modal 1 (Upload): Cascading Talukas & Villages
   const uploadTargetTalukas = useMemo(() => {

@@ -2469,4 +2469,202 @@ class NetaDashboardController extends Controller
             'count' => $insertedCount,
         ]);
     }
+
+    /**
+     * GET /api/election-prabharis
+     * Get election prabharis hierarchy list with stats
+     */
+    public function getElectionPrabharis(Request $request)
+    {
+        $query = DB::table('election_prabharis');
+
+        if ($request->filled('role_type') && $request->role_type !== 'all') {
+            $query->where('role_type', $request->role_type);
+        }
+
+        if ($request->filled('election_id') && $request->election_id !== 'all') {
+            $query->where('election_id', $request->election_id);
+        }
+
+        if ($request->filled('district') && $request->district !== 'all') {
+            $query->where('district', 'like', "%{$request->district}%");
+        }
+
+        if ($request->filled('taluka') && $request->taluka !== 'all') {
+            $query->where('taluka', 'like', "%{$request->taluka}%");
+        }
+
+        if ($request->filled('booth_no') && $request->booth_no !== 'all') {
+            $query->where('booth_no', 'like', "%{$request->booth_no}%");
+        }
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                  ->orWhere('phone', 'like', "%{$s}%")
+                  ->orWhere('village', 'like', "%{$s}%")
+                  ->orWhere('booth_name', 'like', "%{$s}%")
+                  ->orWhere('area_name', 'like', "%{$s}%");
+            });
+        }
+
+        $prabharis = $query->orderBy('id', 'asc')->get();
+
+        // Compute Hierarchy Counts
+        $counts = [
+            'total' => DB::table('election_prabharis')->count(),
+            'booth_karyakarta' => DB::table('election_prabharis')->where('role_type', 'booth_karyakarta')->count(),
+            'booth_pramukh' => DB::table('election_prabharis')->where('role_type', 'booth_pramukh')->count(),
+            'booth_area_pramukh' => DB::table('election_prabharis')->where('role_type', 'booth_area_pramukh')->count(),
+            'taluka_pramukh' => DB::table('election_prabharis')->where('role_type', 'taluka_pramukh')->count(),
+            'jilha_pramukh' => DB::table('election_prabharis')->where('role_type', 'jilha_pramukh')->count(),
+            'vibhag_pramukh' => DB::table('election_prabharis')->where('role_type', 'vibhag_pramukh')->count(),
+            'active' => DB::table('election_prabharis')->where('status', 'active')->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $prabharis,
+            'counts' => $counts,
+        ]);
+    }
+
+    /**
+     * POST /api/election-prabharis
+     * Store a new Prabhari in DB
+     */
+    public function storeElectionPrabhari(Request $request)
+    {
+        $roleMap = [
+            'booth_karyakarta' => ['mr' => 'बूथ कार्यकर्ता', 'en' => 'Booth Karyakarta'],
+            'booth_pramukh' => ['mr' => 'बूथ प्रमुख', 'en' => 'Booth Pramukh'],
+            'booth_area_pramukh' => ['mr' => 'बूथ एरिया प्रमुख', 'en' => 'Booth Area Pramukh'],
+            'taluka_pramukh' => ['mr' => 'तालुका प्रमुख', 'en' => 'Taluka Pramukh'],
+            'jilha_pramukh' => ['mr' => 'जिल्हा प्रमुख', 'en' => 'Jilha Pramukh'],
+            'vibhag_pramukh' => ['mr' => 'विभाग प्रमुख', 'en' => 'Vibhag Pramukh'],
+        ];
+
+        $roleType = $request->input('role_type', 'booth_karyakarta');
+        $titleMr = $roleMap[$roleType]['mr'] ?? ($request->input('role_title_mr') ?: 'निवडणूक प्रभारी');
+        $titleEn = $roleMap[$roleType]['en'] ?? ($request->input('role_title_en') ?: 'Election In-Charge');
+
+        $id = DB::table('election_prabharis')->insertGetId([
+            'election_id' => $request->input('election_id', 1),
+            'election_name' => $request->input('election_name', '२८२ - सांगली विधानसभा निवडणूक २०२६'),
+            'role_type' => $roleType,
+            'role_title_mr' => $titleMr,
+            'role_title_en' => $titleEn,
+            'name' => $request->input('name'),
+            'phone' => $request->input('phone'),
+            'whatsapp_number' => $request->input('whatsapp_number') ?: $request->input('phone'),
+            'district' => $request->input('district', 'सांगली'),
+            'taluka' => $request->input('taluka', 'मिरज'),
+            'village' => $request->input('village', ''),
+            'booth_no' => $request->input('booth_no', '१'),
+            'booth_name' => $request->input('booth_name', ''),
+            'area_name' => $request->input('area_name', ''),
+            'assigned_voters_target' => $request->input('assigned_voters_target', 500),
+            'covered_voters' => $request->input('covered_voters', 0),
+            'status' => $request->input('status', 'active'),
+            'responsibilities' => $request->input('responsibilities', ''),
+            'appointed_date' => $request->input('appointed_date', date('Y-m-d')),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $created = DB::table('election_prabharis')->where('id', $id)->first();
+
+        return response()->json([
+            'success' => true,
+            'message' => "प्रभारी '{$request->name}' यशस्वीरीत्या नियुक्त केले.",
+            'data' => $created,
+        ], 201);
+    }
+
+    /**
+     * PUT /api/election-prabharis/{id}
+     * Update existing Prabhari
+     */
+    public function updateElectionPrabhari(Request $request, $id)
+    {
+        $updateData = [];
+        $fields = [
+            'name', 'phone', 'whatsapp_number', 'district', 'taluka', 'village',
+            'booth_no', 'booth_name', 'area_name', 'assigned_voters_target',
+            'covered_voters', 'status', 'responsibilities', 'election_id', 'election_name'
+        ];
+
+        foreach ($fields as $f) {
+            if ($request->has($f)) {
+                $updateData[$f] = $request->input($f);
+            }
+        }
+        $updateData['updated_at'] = now();
+
+        DB::table('election_prabharis')->where('id', $id)->update($updateData);
+        $updated = DB::table('election_prabharis')->where('id', $id)->first();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'प्रभारी माहिती अद्ययावत केली.',
+            'data' => $updated,
+        ]);
+    }
+
+    /**
+     * DELETE /api/election-prabharis/{id}
+     */
+    public function deleteElectionPrabhari($id)
+    {
+        DB::table('election_prabharis')->where('id', $id)->delete();
+        return response()->json([
+            'success' => true,
+            'message' => 'प्रभारी नोंद काढून टाकली.',
+        ]);
+    }
+
+    /**
+     * GET /api/elections-list
+     * Returns all elections configured in database (karkarta_evm_elections and projects)
+     */
+    public function getElectionsList()
+    {
+        $evmElections = DB::table('karkarta_evm_elections')
+            ->select('id', 'name', 'status', 'created_at')
+            ->get()
+            ->map(function ($e) {
+                $prabhariCount = DB::table('election_prabharis')->where('election_id', $e->id)->count();
+                return [
+                    'id' => $e->id,
+                    'name' => $e->name,
+                    'type' => 'विधानसभा / स्थानिक स्वराज्य संस्था',
+                    'status' => $e->status ?? 'ACTIVE',
+                    'prabhari_count' => $prabhariCount,
+                    'created_at' => $e->created_at,
+                ];
+            });
+
+        // Also fetch from projects
+        $projectElections = DB::table('projects')
+            ->select('id', 'name', 'project_type', 'status', 'created_at')
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'id' => 1000 + $p->id,
+                    'name' => $p->name . ' (' . ($p->project_type ?? 'Election') . ')',
+                    'type' => $p->project_type ?? 'LOK_SABHA',
+                    'status' => $p->status ?? 'ACTIVE',
+                    'prabhari_count' => 0,
+                    'created_at' => $p->created_at,
+                ];
+            });
+
+        $all = $evmElections->concat($projectElections)->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $all,
+        ]);
+    }
 }

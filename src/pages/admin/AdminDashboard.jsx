@@ -17,12 +17,21 @@ import KarkartaEvmVotingSystem from './AdminEvmVotingSystem';
 import AdminProfileModal from './AdminProfileModal';
 import ElectionAnalysisWorkbench from './ElectionAnalysisWorkbench';
 import MatdanYadiManager from '../../components/MatdanYadiManager';
+import ElectionPrabhariManager from './ElectionPrabhariManager';
 import UsersAiPermissionManager from './UsersAiPermissionManager';
 import { translateTree } from '../../i18n/adminTranslations';
 import adminBannerBg from '../../assets/admin_banner_bg.png';
 
 // Crisp SVGs matching Neta platform design language
 const icons = {
+  prabhari: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
   evm: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="3" width="20" height="18" rx="2" />
@@ -558,6 +567,14 @@ function AdminDashboard() {
             iconKey: 'voter_list',
             badge: 'NEW',
             badgeTheme: 'emerald',
+          },
+          {
+            id: 'election_prabhari',
+            label_mr: 'निवडणूक प्रभारी',
+            label_en: 'Election Prabhari',
+            iconKey: 'prabhari',
+            badge: 'NEW',
+            badgeTheme: 'amber',
           },
           {
             id: 'approvals',
@@ -2513,6 +2530,7 @@ function AdminDashboard() {
     if (active === 'evm') return <KarkartaEvmVotingSystem user={user} isMr={isMr} isAdmin={true} />;
     if (active === 'election_analysis') return <ElectionAnalysisWorkbench isMr={isMr} language={language} />;
     if (active === 'voter_list') return <MatdanYadiManager lang={language} />;
+    if (active === 'election_prabhari') return <ElectionPrabhariManager isMr={isMr} lang={language} />;
     if (active === 'attendance') return <UserAttendanceManager language={language} />;
     if (active === 'master') return <LocationMasterExplorer language={language} />;
     if (active === 'forms') return <HouseholdSurveyForm user={user} language={language} />;
