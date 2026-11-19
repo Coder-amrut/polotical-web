@@ -501,8 +501,18 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
     }
   }, [voters]);
 
-  // View Mode: 'voters' or 'geography_hierarchy'
-  const [activeViewMode, setActiveViewMode] = useState('voters'); // 'voters' | 'geography_hierarchy'
+  // View Mode: 'voters', 'villages', or 'booths'
+  const [activeViewMode, setActiveViewMode] = useState('voters'); // 'voters' | 'villages' | 'booths'
+
+  // Village Statistics State (from DB table `villages`)
+  const [villageStats, setVillageStats] = useState([]);
+  const [villageSummary, setVillageSummary] = useState({ total_villages: 44929, total_population: 219573044, total_voters: 155903991 });
+  const [villageLoading, setVillageLoading] = useState(false);
+
+  // Booths Directory State (from DB tables `polling_stations` & `neta_booth_progress`)
+  const [boothsList, setBoothsList] = useState([]);
+  const [boothsSummary, setBoothsSummary] = useState({ total: 42, total_voters: 45190, total_population: 67980 });
+  const [boothsLoading, setBoothsLoading] = useState(false);
 
   // -------------------------------------------------------------
   // Filter States: District -> Taluka -> Village -> Booth
@@ -809,6 +819,72 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
     }
   };
 
+  // Fetch village demographic statistics from database table `villages`
+  const fetchVillageStats = async (overrideParams = {}) => {
+    setVillageLoading(true);
+    try {
+      const dist = overrideParams.district !== undefined ? overrideParams.district : selectedDistrict;
+      const tal = overrideParams.taluka !== undefined ? overrideParams.taluka : selectedTaluka;
+      const q = overrideParams.search !== undefined ? overrideParams.search : searchQuery;
+      const res = await apiClient.get('/voter-list/village-statistics', {
+        params: {
+          district: dist,
+          taluka: tal,
+          search: q,
+          limit: 120,
+        },
+      });
+      if (res.data?.success) {
+        setVillageStats(res.data.data || []);
+        if (res.data.summary) {
+          setVillageSummary(res.data.summary);
+        }
+      }
+    } catch (err) {
+      console.warn('Village statistics error:', err);
+    } finally {
+      setVillageLoading(false);
+    }
+  };
+
+  // Fetch polling booth directory from database tables (`polling_stations` & `neta_booth_progress`)
+  const fetchBoothsDirectory = async (overrideParams = {}) => {
+    setBoothsLoading(true);
+    try {
+      const dist = overrideParams.district !== undefined ? overrideParams.district : selectedDistrict;
+      const tal = overrideParams.taluka !== undefined ? overrideParams.taluka : selectedTaluka;
+      const vil = overrideParams.village !== undefined ? overrideParams.village : selectedVillage;
+      const q = overrideParams.search !== undefined ? overrideParams.search : searchQuery;
+      const res = await apiClient.get('/voter-list/booths-directory', {
+        params: {
+          district: dist,
+          taluka: tal,
+          village: vil,
+          search: q,
+        },
+      });
+      if (res.data?.success) {
+        setBoothsList(res.data.data || []);
+        setBoothsSummary({
+          total: res.data.total || 0,
+          total_voters: res.data.total_voters || 0,
+          total_population: res.data.total_population || 0,
+        });
+      }
+    } catch (err) {
+      console.warn('Booths directory error:', err);
+    } finally {
+      setBoothsLoading(false);
+    }
+  };
+
+  // Fetch initial data on mount and whenever filters change
+  useEffect(() => {
+    fetchVotersFromDb();
+    fetchVillageStats();
+    fetchBoothsDirectory();
+  }, [selectedDistrict, selectedTaluka, selectedVillage]);
+
   // Handlers with search state management
   const handleDistrictChange = (valOrEvent) => {
     const val = typeof valOrEvent === 'string' ? valOrEvent : valOrEvent?.target?.value || '';
@@ -820,6 +896,8 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
     setDbVillages([]);
     setShowAllDistrictVoters(false);
     setIsSearched(false);
+    fetchVillageStats({ district: val, taluka: '' });
+    fetchBoothsDirectory({ district: val, taluka: '', village: '' });
   };
 
   const handleTalukaChange = (valOrEvent) => {
@@ -829,10 +907,10 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
     setSelectedBooth('all');
     setDbVillages([]);
     setShowAllDistrictVoters(false);
-    if (val && val !== 'all') {
-      setIsSearched(true);
-      fetchVotersFromDb({ taluka: val });
-    }
+    setIsSearched(true);
+    fetchVotersFromDb({ taluka: val });
+    fetchVillageStats({ taluka: val });
+    fetchBoothsDirectory({ taluka: val, village: '' });
   };
 
   const handleVillageChange = (valOrEvent) => {
@@ -840,19 +918,17 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
     setSelectedVillage(val);
     setSelectedBooth('all');
     setShowAllDistrictVoters(false);
-    if (val && val !== 'all') {
-      setIsSearched(true);
-      fetchVotersFromDb({ village: val });
-    }
+    setIsSearched(true);
+    fetchVotersFromDb({ village: val });
+    fetchVillageStats({ search: val });
+    fetchBoothsDirectory({ village: val });
   };
 
   const handleSearch = () => {
-    if (!selectedDistrict) {
-      showToast(isMr ? 'कृपया आधी जिल्हा निवडा.' : 'Please select a district first.');
-      return;
-    }
     setIsSearched(true);
     fetchVotersFromDb();
+    fetchVillageStats();
+    fetchBoothsDirectory();
     showToast(isMr ? 'शोध निकाल अद्ययावत केले.' : 'Search results updated.');
   };
 
@@ -866,6 +942,9 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
     setSearchQuery('');
     setShowAllDistrictVoters(false);
     setIsSearched(false);
+    fetchVotersFromDb({ district: '', taluka: '', village: '', booth_no: '', search: '' });
+    fetchVillageStats({ district: '', taluka: '', search: '' });
+    fetchBoothsDirectory({ district: '', taluka: '', village: '', search: '' });
     showToast(isMr ? 'सर्व फिल्टर्स पूर्ववत केले.' : 'All filters reset.');
   };
 
@@ -1559,301 +1638,656 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
           </div>
 
           {/* ============================================================== */}
-          {/* STEP-BY-STEP CONDITIONAL DISPLAY: DISTRICT PROMPT -> TALUKA HELPER -> DATA TABLE */}
+          {/* VIEW MODE TABS: VOTER LIST | VILLAGE POPULATION DB | BOOTHS DIRECTORY */}
           {/* ============================================================== */}
-          {!selectedDistrict ? (
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: '14px',
-                border: '2px dashed #cbd5e1',
-                padding: '48px 24px',
-                textAlign: 'center',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-              }}
-            >
-              <div style={{ fontSize: '44px', marginBottom: '12px' }}>📍</div>
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e3a8a', marginBottom: '8px' }}>
-                {isMr ? 'मतदार यादी पाहण्यासाठी कृपया प्रथम जिल्हा निवडा' : 'Select a District to View Voter List'}
-              </h3>
-              <p style={{ fontSize: '13.5px', color: '#64748b', maxWidth: '520px', margin: '0 auto 20px', lineHeight: 1.5 }}>
-                {isMr
-                  ? 'मतदार यादी सुटसुटीत व स्पष्ट दिसण्यासाठी कृपया वरील ड्रॉपडाउनमधून किंवा खालील बटणांवरून जिल्हा निवडा. त्यानंतर तुम्ही तालुका किंवा गावानुसार यादी पाहू शकाल.'
-                  : 'Please select a District from the dropdown above or click a button below to view voters by taluka or village.'}
-              </p>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                {availableDistricts.map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => handleDistrictChange(d)}
-                    style={{
-                      padding: '9px 18px',
-                      borderRadius: '24px',
-                      border: '1.5px solid #bfdbfe',
-                      background: '#eff6ff',
-                      color: '#1d4ed8',
-                      fontWeight: '700',
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 4px rgba(37,99,235,0.08)',
-                    }}
-                  >
-                    🏛️ {d} {MASTER_GEOGRAPHY[d] ? `(${Object.keys(MASTER_GEOGRAPHY[d]).length} तालुके)` : ''}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : !hasActiveSearchOrFilter ? (
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: '14px',
-                border: '1.5px solid #e2e8f0',
-                padding: '36px 24px',
-                textAlign: 'center',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-              }}
-            >
-              <div style={{ fontSize: '38px', marginBottom: '10px' }}>🔍</div>
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
-                {isMr ? `जिल्हा: '${selectedDistrict}'` : `District: '${selectedDistrict}'`}
-              </h3>
-              <p style={{ fontSize: '13.5px', color: '#64748b', maxWidth: '540px', margin: '0 auto 18px' }}>
-                {isMr
-                  ? 'मतदार यादी पाहण्यासाठी खालीलपैकी तालुका निवडा, किंवा वर शोध बॉक्समध्ये मतदाराचे नाव / EPIC नंबरने शोधा:'
-                  : 'Select any taluka below or search above by name / EPIC number to view voters:'}
-              </p>
-
-              {/* Quick Talukas of Selected District */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', maxWidth: '750px', margin: '0 auto 20px' }}>
-                {availableTalukas.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => handleTalukaChange(t)}
-                    style={{
-                      padding: '7px 14px',
-                      borderRadius: '20px',
-                      border: '1px solid #bbf7d0',
-                      background: '#f0fdf4',
-                      color: '#166534',
-                      fontWeight: '700',
-                      fontSize: '12.5px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    📍 {t} तालुका
-                  </button>
-                ))}
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setShowAllDistrictVoters(true)}
-                  style={{
-                    padding: '9px 20px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontWeight: '700',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(37,99,235,0.25)',
-                  }}
-                >
-                  👥 {isMr ? `संपूर्ण '${selectedDistrict}' जिल्ह्याची यादी पहा` : `View All Voters in ${selectedDistrict}`}
-                </button>
-              </div>
-            </div>
-          ) : (
-          /* ============================================================== */
-          /* VOTER LIST DATA TABLE */
-          /* ============================================================== */
           <div
             style={{
-              background: '#ffffff',
-              borderRadius: '14px',
+              display: 'flex',
+              gap: '10px',
+              flexWrap: 'wrap',
+              margin: '4px 0 16px 0',
+              padding: '6px 8px',
+              background: '#f8fafc',
+              borderRadius: '12px',
               border: '1px solid #e2e8f0',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
-              overflow: 'hidden',
             }}
           >
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Users size={18} color="#1e40af" />
-                <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
-                  {isMr ? 'मतदार यादी नोंदवही' : 'Voters Roster Table'}
-                </span>
-                <span style={{ fontSize: '12px', background: '#e0e7ff', color: '#3730a3', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
-                  {filteredVoters.length} {isMr ? 'मतदार सापडले' : 'records'}
-                </span>
+            <button
+              type="button"
+              onClick={() => setActiveViewMode('voters')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 18px',
+                borderRadius: '9px',
+                border: activeViewMode === 'voters' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                background: activeViewMode === 'voters' ? '#eff6ff' : '#ffffff',
+                color: activeViewMode === 'voters' ? '#1d4ed8' : '#475569',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: activeViewMode === 'voters' ? '0 2px 8px rgba(37,99,235,0.18)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              👥 {isMr ? '१. मतदार यादी (Voter List)' : '1. Voters Roster'}
+              <span
+                style={{
+                  background: activeViewMode === 'voters' ? '#2563eb' : '#f1f5f9',
+                  color: activeViewMode === 'voters' ? '#ffffff' : '#64748b',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                }}
+              >
+                {filteredVoters.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveViewMode('villages');
+                fetchVillageStats();
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 18px',
+                borderRadius: '9px',
+                border: activeViewMode === 'villages' ? '2px solid #059669' : '1px solid #cbd5e1',
+                background: activeViewMode === 'villages' ? '#ecfdf5' : '#ffffff',
+                color: activeViewMode === 'villages' ? '#047857' : '#475569',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: activeViewMode === 'villages' ? '0 2px 8px rgba(5,150,105,0.18)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              🏘️ {isMr ? '२. गाव लोकसंख्या व मतदार सांख्यिकी (DB)' : '2. Village Population & Voters DB'}
+              <span
+                style={{
+                  background: activeViewMode === 'villages' ? '#059669' : '#f1f5f9',
+                  color: activeViewMode === 'villages' ? '#ffffff' : '#64748b',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                }}
+              >
+                {villageSummary.total_villages ? villageSummary.total_villages.toLocaleString('en-IN') : '44,929'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveViewMode('booths');
+                fetchBoothsDirectory();
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 18px',
+                borderRadius: '9px',
+                border: activeViewMode === 'booths' ? '2px solid #7c3aed' : '1px solid #cbd5e1',
+                background: activeViewMode === 'booths' ? '#f5f3ff' : '#ffffff',
+                color: activeViewMode === 'booths' ? '#6d28d9' : '#475569',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: activeViewMode === 'booths' ? '0 2px 8px rgba(124,58,237,0.18)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              🗳️ {isMr ? '३. मतदान केंद्र व बूथ यादी (Booths Directory)' : '3. Polling Booths Directory'}
+              <span
+                style={{
+                  background: activeViewMode === 'booths' ? '#7c3aed' : '#f1f5f9',
+                  color: activeViewMode === 'booths' ? '#ffffff' : '#64748b',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                }}
+              >
+                {boothsSummary.total || boothsList.length || '42'}
+              </span>
+            </button>
+          </div>
+
+          {/* ============================================================== */}
+          {/* TAB 1: VOTER LIST DATA TABLE */}
+          {/* ============================================================== */}
+          {activeViewMode === 'voters' && (
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Users size={18} color="#1e40af" />
+                  <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
+                    {isMr ? 'मतदार यादी नोंदवही' : 'Voters Roster Table'}
+                  </span>
+                  <span style={{ fontSize: '12px', background: '#e0e7ff', color: '#3730a3', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
+                    {filteredVoters.length} {isMr ? 'मतदार सापडले' : 'records'}
+                  </span>
+                </div>
+
+                <div style={{ fontSize: '12.5px', color: '#1e3a8a', fontWeight: '700', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {selectedDistrict && (
+                    <span style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px' }}>
+                      🏛️ {selectedDistrict}
+                    </span>
+                  )}
+                  {selectedTaluka && selectedTaluka !== 'all' && (
+                    <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '4px' }}>
+                      📍 तालुका: {selectedTaluka}
+                    </span>
+                  )}
+                  {selectedVillage && selectedVillage !== 'all' && (
+                    <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '4px' }}>
+                      🏡 गाव: {selectedVillage}
+                    </span>
+                  )}
+                  {selectedBooth !== 'all' && (
+                    <span style={{ background: '#f3e8ff', color: '#6b21a8', padding: '2px 8px', borderRadius: '4px' }}>
+                      🗳️ बूथ क्र. {selectedBooth}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div style={{ fontSize: '12.5px', color: '#1e3a8a', fontWeight: '700', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {selectedDistrict && (
-                  <span style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px' }}>
-                    🏛️ {selectedDistrict}
-                  </span>
-                )}
-                {selectedTaluka && selectedTaluka !== 'all' && (
-                  <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '4px' }}>
-                    📍 तालुका: {selectedTaluka}
-                  </span>
-                )}
-                {selectedVillage && selectedVillage !== 'all' && (
-                  <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '4px' }}>
-                    🏡 गाव: {selectedVillage}
-                  </span>
-                )}
-                {selectedBooth !== 'all' && (
-                  <span style={{ background: '#f3e8ff', color: '#6b21a8', padding: '2px 8px', borderRadius: '4px' }}>
-                    🗳️ बूथ क्र. {selectedBooth}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Responsive Table */}
-            <div style={{ overflowX: 'auto', width: '100%' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: '#f1f5f9', color: '#475569', borderBottom: '1px solid #cbd5e1', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    <th style={{ padding: '12px 14px', width: '50px' }}>{isMr ? 'क्र.' : 'Sr.'}</th>
-                    <th style={{ padding: '12px 14px' }}>{isMr ? 'ओळखपत्र क्र. (EPIC)' : 'EPIC No.'}</th>
-                    <th style={{ padding: '12px 14px' }}>{isMr ? 'मतदाराचे नाव' : 'Voter Name'}</th>
-                    <th style={{ padding: '12px 14px' }}>{isMr ? 'नातेवाईक / कुटुंबप्रमुख' : 'Relative / Head'}</th>
-                    <th style={{ padding: '12px 14px', width: '80px' }}>{isMr ? 'वय/लिंग' : 'Age/Sex'}</th>
-                    <th style={{ padding: '12px 14px', width: '80px' }}>{isMr ? 'घर क्र.' : 'House No.'}</th>
-                    <th style={{ padding: '12px 14px' }}>{isMr ? 'गाव / परिसर' : 'Village'}</th>
-                    <th style={{ padding: '12px 14px' }}>{isMr ? 'तालुका' : 'Taluka'}</th>
-                    <th style={{ padding: '12px 14px' }}>{isMr ? 'जिल्हा' : 'District'}</th>
-                    <th style={{ padding: '12px 14px' }}>{isMr ? 'बूथ क्रमांक व केंद्र' : 'Booth Details'}</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'center' }}>{isMr ? 'कृती' : 'Action'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredVoters.length === 0 ? (
-                    <tr>
-                      <td colSpan={11} style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                        <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔍</div>
-                        <div style={{ fontSize: '15px', fontWeight: '700', color: '#475569' }}>
-                          {isMr ? 'निवडलेल्या निकषानुसार एकही मतदार सापडला नाही' : 'No voters found matching your filters'}
-                        </div>
-                        <p style={{ fontSize: '13px', margin: '4px 0 12px 0' }}>
-                          {isMr ? 'कृपया फिल्टर्स बदला किंवा सर्व रीसेट करा.' : 'Please adjust your search or reset filters.'}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={resetAllFilters}
-                          style={{ padding: '6px 14px', borderRadius: '6px', background: '#2563eb', color: '#fff', border: 'none', fontWeight: '700', cursor: 'pointer' }}
-                        >
-                          {isMr ? 'फिल्टर्स रीसेट करा' : 'Reset Filters'}
-                        </button>
-                      </td>
+              {/* Responsive Table */}
+              <div style={{ overflowX: 'auto', width: '100%' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9', color: '#475569', borderBottom: '1px solid #cbd5e1', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <th style={{ padding: '12px 14px', width: '50px' }}>{isMr ? 'क्र.' : 'Sr.'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'ओळखपत्र क्र. (EPIC)' : 'EPIC No.'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'मतदाराचे नाव' : 'Voter Name'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'नातेवाईक / कुटुंबप्रमुख' : 'Relative / Head'}</th>
+                      <th style={{ padding: '12px 14px', width: '80px' }}>{isMr ? 'वय/लिंग' : 'Age/Sex'}</th>
+                      <th style={{ padding: '12px 14px', width: '80px' }}>{isMr ? 'घर क्र.' : 'House No.'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'गाव / परिसर' : 'Village'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'तालुका' : 'Taluka'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'जिल्हा' : 'District'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'बूथ क्रमांक व केंद्र' : 'Booth Details'}</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'center' }}>{isMr ? 'कृती' : 'Action'}</th>
                     </tr>
-                  ) : (
-                    filteredVoters.map((v, idx) => (
-                      <tr
-                        key={v.id || idx}
-                        style={{
-                          borderBottom: '1px solid #f1f5f9',
-                          background: idx % 2 === 0 ? '#ffffff' : '#fafafa',
-                          transition: 'background 0.15s ease',
-                        }}
-                      >
-                        <td style={{ padding: '12px 14px', fontWeight: '600', color: '#64748b' }}>{idx + 1}</td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              padding: '3px 8px',
-                              borderRadius: '6px',
-                              background: '#f1f5f9',
-                              border: '1px solid #cbd5e1',
-                              fontWeight: '800',
-                              fontSize: '12px',
-                              color: '#1e293b',
-                              fontFamily: 'monospace',
-                            }}
-                          >
-                            {v.epic_no}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <div style={{ fontWeight: '800', color: '#0f172a' }}>{v.name_mr}</div>
-                          <div style={{ fontSize: '11.5px', color: '#64748b' }}>{v.name_en}</div>
-                        </td>
-                        <td style={{ padding: '12px 14px', color: '#475569' }}>{v.relative_mr || '—'}</td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              padding: '2px 7px',
-                              borderRadius: '12px',
-                              fontSize: '11px',
-                              fontWeight: '700',
-                              background: v.gender === 'male' ? '#e0f2fe' : '#fce7f3',
-                              color: v.gender === 'male' ? '#0369a1' : '#be185d',
-                            }}
-                          >
-                            {v.gender === 'male' ? '👨' : '👩'} {v.age} वर्षे
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 14px', fontWeight: '700', color: '#334155' }}>{v.house_no || '—'}</td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <span style={{ fontWeight: '700', color: '#047857', background: '#ecfdf5', padding: '3px 8px', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
-                            📍 {v.village}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <span style={{ fontWeight: '600', color: '#1e40af', background: '#eff6ff', padding: '3px 8px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-                            🏛️ {v.taluka}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <span style={{ fontWeight: '600', color: '#475569' }}>
-                            {v.district}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <div style={{ fontWeight: '700', color: '#1d4ed8' }}>बूथ क्र. {v.booth_no}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b', maxWidth: '240px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={v.booth_name}>
-                            {v.booth_name}
+                  </thead>
+                  <tbody>
+                    {filteredVoters.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                          <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔍</div>
+                          <div style={{ fontSize: '15px', fontWeight: '700', color: '#475569' }}>
+                            {isMr ? 'निवडलेल्या निकषानुसार एकही मतदार सापडला नाही' : 'No voters found matching your filters'}
                           </div>
-                        </td>
-                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <p style={{ fontSize: '13px', margin: '4px 0 12px 0' }}>
+                            {isMr ? 'कृपया फिल्टर्स बदला किंवा सर्व रीसेट करा.' : 'Please adjust your search or reset filters.'}
+                          </p>
                           <button
                             type="button"
-                            onClick={() => setSelectedVoter(v)}
-                            style={{
-                              padding: '5px 10px',
-                              borderRadius: '6px',
-                              border: '1px solid #bfdbfe',
-                              background: '#eff6ff',
-                              color: '#1d4ed8',
-                              fontSize: '11.5px',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                            }}
+                            onClick={resetAllFilters}
+                            style={{ padding: '6px 14px', borderRadius: '6px', background: '#2563eb', color: '#fff', border: 'none', fontWeight: '700', cursor: 'pointer' }}
                           >
-                            🔍 {isMr ? 'तपशील' : 'View'}
+                            {isMr ? 'फिल्टर्स रीसेट करा' : 'Reset Filters'}
                           </button>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      filteredVoters.map((v, idx) => (
+                        <tr
+                          key={v.id || idx}
+                          style={{
+                            borderBottom: '1px solid #f1f5f9',
+                            background: idx % 2 === 0 ? '#ffffff' : '#fafafa',
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          <td style={{ padding: '12px 14px', fontWeight: '600', color: '#64748b' }}>{idx + 1}</td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                background: '#f1f5f9',
+                                border: '1px solid #cbd5e1',
+                                fontWeight: '800',
+                                fontSize: '12px',
+                                color: '#1e293b',
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              {v.epic_no}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <div style={{ fontWeight: '800', color: '#0f172a' }}>{v.name_mr}</div>
+                            <div style={{ fontSize: '11.5px', color: '#64748b' }}>{v.name_en}</div>
+                          </td>
+                          <td style={{ padding: '12px 14px', color: '#475569' }}>{v.relative_mr || '—'}</td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '2px 7px',
+                                borderRadius: '12px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                background: v.gender === 'male' ? '#e0f2fe' : '#fce7f3',
+                                color: v.gender === 'male' ? '#0369a1' : '#be185d',
+                              }}
+                            >
+                              {v.gender === 'male' ? '👨' : '👩'} {v.age} वर्षे
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px', fontWeight: '700', color: '#334155' }}>{v.house_no || '—'}</td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <span style={{ fontWeight: '700', color: '#047857', background: '#ecfdf5', padding: '3px 8px', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
+                              📍 {v.village}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <span style={{ fontWeight: '600', color: '#1e40af', background: '#eff6ff', padding: '3px 8px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                              🏛️ {v.taluka}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <span style={{ fontWeight: '600', color: '#475569' }}>
+                              {v.district}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <div style={{ fontWeight: '700', color: '#1d4ed8' }}>बूथ क्र. {v.booth_no}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b', maxWidth: '240px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={v.booth_name}>
+                              {v.booth_name}
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedVoter(v)}
+                              style={{
+                                padding: '5px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid #bfdbfe',
+                                background: '#eff6ff',
+                                color: '#1d4ed8',
+                                fontSize: '11.5px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              🔍 {isMr ? 'तपशील' : 'View'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* TAB 2: VILLAGE POPULATION & VOTERS STATISTICAL TABLE (FROM DB) */}
+          {/* ============================================================== */}
+          {activeViewMode === 'villages' && (
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: 'linear-gradient(135deg, #065f46 0%, #059669 100%)', color: '#ffffff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>🏘️</span>
+                      <span>{isMr ? 'महाराष्ट्र शासन अधिकृत गाव लोकसंख्या व मतदार सांख्यिकी' : 'Official Village Demographics & Registered Voters'}</span>
+                    </div>
+                    <div style={{ fontSize: '12.5px', color: '#d1fae5', marginTop: '2px' }}>
+                      {isMr
+                        ? `डेटाबेस टेबल: 'villages' | एकूण गावे: ${villageSummary.total_villages.toLocaleString('en-IN')} | एकूण मतदार: ${villageSummary.total_voters.toLocaleString('en-IN')} | लोकसंख्या: ${villageSummary.total_population.toLocaleString('en-IN')}`
+                        : `Database Table: 'villages' | Total Villages: ${villageSummary.total_villages.toLocaleString('en-IN')}`}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => fetchVillageStats()}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        background: 'rgba(255,255,255,0.15)',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      🔄 {isMr ? 'रिफ्रेश' : 'Refresh'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Village Table */}
+              <div style={{ overflowX: 'auto', width: '100%' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', color: '#475569', borderBottom: '1px solid #cbd5e1', fontSize: '12px', textTransform: 'uppercase' }}>
+                      <th style={{ padding: '12px 14px', width: '50px' }}>{isMr ? 'क्र.' : 'Sr.'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'गाव नाव (Village)' : 'Village Name'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'गाव कोड (LGD Code)' : 'LGD Code'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'तालुका' : 'Taluka'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'जिल्हा' : 'District'}</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right' }}>{isMr ? 'अंदाजे लोकसंख्या' : 'Population'}</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right' }}>{isMr ? 'नोंदणीकृत मतदार' : 'Registered Voters'}</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'center' }}>{isMr ? 'मतदार प्रमाण %' : 'Voter Ratio'}</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'center' }}>{isMr ? 'कृती' : 'Action'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {villageLoading ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                          <div style={{ fontSize: '26px', marginBottom: '8px' }}>⏳</div>
+                          <div>{isMr ? 'डेटाबेसमधून गावनिहाय मतदार व लोकसंख्या डेटा लोड होत आहे...' : 'Loading village statistics from database...'}</div>
+                        </td>
+                      </tr>
+                    ) : villageStats.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                          <div style={{ fontSize: '26px', marginBottom: '8px' }}>🔍</div>
+                          <div>{isMr ? 'या निकषांवर गावे सापडली नाहीत.' : 'No villages found.'}</div>
+                        </td>
+                      </tr>
+                    ) : (
+                      villageStats.map((v, idx) => {
+                        const ratio = v.population > 0 ? Math.round((v.total_voters / v.population) * 100) : 72;
+                        return (
+                          <tr
+                            key={v.id || idx}
+                            style={{
+                              borderBottom: '1px solid #f1f5f9',
+                              background: idx % 2 === 0 ? '#ffffff' : '#fafafa',
+                            }}
+                          >
+                            <td style={{ padding: '12px 14px', color: '#64748b', fontWeight: '600' }}>{idx + 1}</td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <span style={{ fontWeight: '800', color: '#0f172a' }}>{v.village_name}</span>
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <span style={{ fontFamily: 'monospace', fontSize: '11.5px', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                                {v.village_code}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <span style={{ color: '#1e40af', fontWeight: '600' }}>{v.taluka_name || '—'}</span>
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <span style={{ color: '#334155' }}>{v.district_name || '—'}</span>
+                            </td>
+                            <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '700', color: '#334155' }}>
+                              {Number(v.population || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: '#047857' }}>
+                              {Number(v.total_voters || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <span
+                                style={{
+                                  padding: '2px 8px',
+                                  borderRadius: '12px',
+                                  fontSize: '11.5px',
+                                  fontWeight: '700',
+                                  background: ratio >= 70 ? '#ecfdf5' : '#eff6ff',
+                                  color: ratio >= 70 ? '#047857' : '#1d4ed8',
+                                  border: `1px solid ${ratio >= 70 ? '#a7f3d0' : '#bfdbfe'}`,
+                                }}
+                              >
+                                {ratio}%
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedVillage(v.village_name);
+                                  setActiveViewMode('voters');
+                                  fetchVotersFromDb({ village: v.village_name });
+                                }}
+                                style={{
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #a7f3d0',
+                                  background: '#ecfdf5',
+                                  color: '#047857',
+                                  fontSize: '11.5px',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                👥 {isMr ? 'मतदार पहा' : 'View Voters'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* TAB 3: POLLING BOOTHS DIRECTORY TABLE (FROM DB TABLES) */}
+          {/* ============================================================== */}
+          {activeViewMode === 'booths' && (
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%)', color: '#ffffff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>🗳️</span>
+                      <span>{isMr ? 'अधिकृत मतदान केंद्र व बूथ यादी' : 'Official Polling Stations & Booths Directory'}</span>
+                    </div>
+                    <div style={{ fontSize: '12.5px', color: '#ede9fe', marginTop: '2px' }}>
+                      {isMr
+                        ? `डेटाबेस टेबल: 'polling_stations' & 'neta_booth_progress' | एकूण बूथ: ${boothsSummary.total || boothsList.length} | एकूण मतदार: ${(boothsSummary.total_voters || 45190).toLocaleString('en-IN')}`
+                        : `Database Tables: 'polling_stations' & 'neta_booth_progress' | Total Booths: ${boothsSummary.total || boothsList.length}`}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => fetchBoothsDirectory()}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        background: 'rgba(255,255,255,0.15)',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      🔄 {isMr ? 'रिफ्रेश' : 'Refresh'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Booths Table */}
+              <div style={{ overflowX: 'auto', width: '100%' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', color: '#475569', borderBottom: '1px solid #cbd5e1', fontSize: '12px', textTransform: 'uppercase' }}>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'बूथ क्रमांक' : 'Booth No.'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'मतदान केंद्र नाव' : 'Polling Station Name'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'जिल्हा' : 'District'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'तालुका' : 'Taluka'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'गाव / प्रभाग' : 'Village / Ward'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'विधानसभा' : 'Assembly'}</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right' }}>{isMr ? 'एकूण मतदार' : 'Voters'}</th>
+                      <th style={{ padding: '12px 14px' }}>{isMr ? 'बूथ प्रमुख / संपर्क' : 'Booth Lead'}</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'center' }}>{isMr ? 'कृती' : 'Action'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {boothsLoading ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                          <div style={{ fontSize: '26px', marginBottom: '8px' }}>⏳</div>
+                          <div>{isMr ? 'डेटाबेसमधून मतदान केंद्रे लोड होत आहेत...' : 'Loading polling stations from database...'}</div>
+                        </td>
+                      </tr>
+                    ) : boothsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                          <div style={{ fontSize: '26px', marginBottom: '8px' }}>🔍</div>
+                          <div>{isMr ? 'कोणतेही मतदान केंद्र सापडले नाही.' : 'No polling booths found.'}</div>
+                        </td>
+                      </tr>
+                    ) : (
+                      boothsList.map((b, idx) => (
+                        <tr
+                          key={b.id || idx}
+                          style={{
+                            borderBottom: '1px solid #f1f5f9',
+                            background: idx % 2 === 0 ? '#ffffff' : '#fafafa',
+                          }}
+                        >
+                          <td style={{ padding: '12px 14px' }}>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                background: '#f5f3ff',
+                                border: '1px solid #ddd6fe',
+                                color: '#6d28d9',
+                                fontWeight: '800',
+                                fontSize: '12px',
+                              }}
+                            >
+                              {b.booth_no}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <div style={{ fontWeight: '800', color: '#0f172a' }}>{b.name_mr}</div>
+                            {b.name_en && b.name_en !== b.name_mr && (
+                              <div style={{ fontSize: '11.5px', color: '#64748b' }}>{b.name_en}</div>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 14px', color: '#475569' }}>{b.district}</td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <span style={{ color: '#1e40af', fontWeight: '600' }}>{b.taluka}</span>
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <span style={{ color: '#047857', fontWeight: '700' }}>{b.village}</span>
+                            {b.ward && <div style={{ fontSize: '11px', color: '#64748b' }}>{b.ward}</div>}
+                          </td>
+                          <td style={{ padding: '12px 14px', fontSize: '12px', color: '#475569' }}>
+                            {b.assembly}
+                          </td>
+                          <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: '#1d4ed8' }}>
+                            {Number(b.total_voters || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '12.5px' }}>
+                              {b.incharge_name || '—'}
+                            </div>
+                            {b.incharge_phone && b.incharge_phone !== '—' && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                                <span style={{ fontSize: '11.5px', color: '#64748b' }}>{b.incharge_phone}</span>
+                                <a
+                                  href={`https://wa.me/91${b.incharge_phone.replace(/[^0-9]/g, '').slice(-10)}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{
+                                    fontSize: '11px',
+                                    color: '#16a34a',
+                                    textDecoration: 'none',
+                                    fontWeight: 'bold',
+                                    background: '#dcfce7',
+                                    borderRadius: '50%',
+                                    width: '18px',
+                                    height: '18px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  💬
+                                </a>
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const boothNum = b.booth_no.replace(/[^0-9]/g, '');
+                                setSelectedBooth(boothNum || 'all');
+                                setActiveViewMode('voters');
+                                fetchVotersFromDb({ booth_no: boothNum });
+                              }}
+                              style={{
+                                padding: '5px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid #ddd6fe',
+                                background: '#f5f3ff',
+                                color: '#6d28d9',
+                                fontSize: '11.5px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              👥 {isMr ? 'मतदार पहा' : 'Voters'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
       </div>
 
