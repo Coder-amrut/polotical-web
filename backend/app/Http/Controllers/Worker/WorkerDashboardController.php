@@ -41,18 +41,28 @@ class WorkerDashboardController extends Controller
     {
         $workerId = $this->getWorkerId($request);
 
-        $totalAssigned = DB::table('worker_contacts')->count();
-        $contacted = DB::table('worker_contacts')->where('contacted', true)->count();
-        $supportive = DB::table('worker_contacts')->where('status', 'Supportive')->count();
+        // Fetch real statistics specifically for this worker
+        $totalAssigned = DB::table('worker_contacts')->where('worker_id', $workerId)->count();
+        $contacted = DB::table('worker_contacts')->where('worker_id', $workerId)->where('contacted', true)->count();
+        $supportive = DB::table('worker_contacts')->where('worker_id', $workerId)->where('status', 'Supportive')->count();
 
         $openComplaints = DB::table('worker_complaints')
+            ->where('worker_id', $workerId)
             ->whereIn('status', ['Pending', 'In Progress'])
             ->count();
-        $openMeetings = DB::table('worker_meetings')->count();
+        $openMeetings = DB::table('worker_meetings')->where('worker_id', $workerId)->count();
         $pendingFollowUps = $openComplaints + $openMeetings;
 
         $surveysCompleted = (int) DB::table('worker_survey_responses')->where('worker_id', $workerId)->count();
         $surveysTarget = max(50, $surveysCompleted + 25);
+
+        // Real attendance score from database
+        $totalAttendanceDays = DB::table('worker_attendances')->where('worker_id', $workerId)->count();
+        $presentDays = DB::table('worker_attendances')->where('worker_id', $workerId)->where('status', 'Present')->count();
+        $attendanceScore = $totalAttendanceDays > 0 ? (int) round(($presentDays / $totalAttendanceDays) * 100) : 0;
+        $attendanceNote = $totalAttendanceDays > 0
+            ? ($attendanceScore >= 80 ? 'नियमित व समयबद्ध' : 'उपस्थिती नोंद आधारित')
+            : 'अद्याप हजेरी नोंद नाही';
 
         // Dynamic outreach trend data directly calculated from database
         $months = [];
@@ -62,16 +72,18 @@ class WorkerDashboardController extends Controller
             $yearMonth = $monthDate->format('Y-m');
 
             $contactsInMonth = DB::table('worker_contacts')
+                ->where('worker_id', $workerId)
                 ->where('created_at', 'like', "{$yearMonth}%")
                 ->count();
             
             $surveysInMonth = DB::table('worker_survey_responses')
+                ->where('worker_id', $workerId)
                 ->where('created_at', 'like', "{$yearMonth}%")
                 ->count();
 
             // Real DB numbers
-            $val1 = $contactsInMonth > 0 ? $contactsInMonth : max(1, (int) round($contacted * ((6 - $i) / 6)));
-            $val2 = $surveysInMonth > 0 ? $surveysInMonth : max(0, (int) round($surveysCompleted * ((6 - $i) / 6)));
+            $val1 = $contactsInMonth;
+            $val2 = $surveysInMonth;
 
             $months[] = [
                 'name'   => $monthName,
@@ -82,6 +94,7 @@ class WorkerDashboardController extends Controller
         $voterData = $months;
 
         $activities = DB::table('worker_activities')
+            ->where('worker_id', $workerId)
             ->orderBy('id', 'desc')
             ->limit(10)
             ->get();
@@ -96,8 +109,11 @@ class WorkerDashboardController extends Controller
                     'pendingFollowUps' => $pendingFollowUps,
                     'surveysCompleted' => $surveysCompleted,
                     'surveysTarget'    => $surveysTarget,
-                    'contactRate'      => $totalAssigned > 0 ? round(($contacted / $totalAssigned) * 100) : 0,
-                    'supportiveRate'   => $contacted > 0 ? round(($supportive / $contacted) * 100) : 0,
+                    'contactRate'      => $totalAssigned > 0 ? (int) round(($contacted / $totalAssigned) * 100) : 0,
+                    'supportiveRate'   => $contacted > 0 ? (int) round(($supportive / $contacted) * 100) : 0,
+                    'attendanceScore'  => $attendanceScore,
+                    'attendanceDays'   => $presentDays,
+                    'attendanceNote'   => $attendanceNote,
                 ],
                 'voterData'  => $voterData,
                 'activities' => $activities,
@@ -226,8 +242,6 @@ class WorkerDashboardController extends Controller
 
         $userUpdates = array_filter([
             'full_name'      => $data['fullName'] ?? null,
-            'email'          => $data['email'] ?? null,
-            'phone'          => $data['phone'] ?? null,
             'caste'          => $data['caste'] ?? null,
             'caste_category' => $data['category'] ?? null,
             'aadhar_number'  => $data['aadharNumber'] ?? null,
@@ -690,13 +704,33 @@ class WorkerDashboardController extends Controller
      */
     public function getComplaints(Request $request)
     {
-        $complaints = DB::table('worker_complaints')
-            ->orderBy('id', 'desc')
-            ->get();
+        $workerId = $this->getWorkerId($request);
+        $user = $request->user();
+
+        $isAdmin = false;
+        if ($user) {
+            $userRoles = DB::table('user_roles')
+                ->join('roles', 'user_roles.role_id', '=', 'roles.id')
+                ->where('user_roles.user_id', $user->id)
+                ->pluck('roles.name')
+                ->map(fn($r) => strtoupper($r))
+                ->toArray();
+            $isAdmin = in_array('ADMIN', $userRoles) || in_array('SUPER_ADMIN', $userRoles) || strtoupper($user->role ?? '') === 'ADMIN';
+        }
+
+        $query = DB::table('worker_complaints')->orderBy('id', 'desc');
+
+        // Only Admin can see all complaints. Regular users only see their own added complaints.
+        if (!$isAdmin) {
+            $query->where('worker_id', $workerId);
+        }
+
+        $complaints = $query->get();
 
         return response()->json([
-            'success' => true,
-            'data'    => $complaints,
+            'success'  => true,
+            'is_admin' => $isAdmin,
+            'data'     => $complaints,
         ]);
     }
 

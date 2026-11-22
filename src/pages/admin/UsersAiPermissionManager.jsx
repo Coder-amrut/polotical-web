@@ -13,7 +13,8 @@ import {
   Lock,
   Sparkles,
   UserCheck,
-  Filter
+  Filter,
+  MoreVertical,
 } from 'lucide-react';
 
 export default function UsersAiPermissionManager({ language = 'mr', onNotice = null, onError = null }) {
@@ -24,6 +25,8 @@ export default function UsersAiPermissionManager({ language = 'mr', onNotice = n
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all'); // 'all', 'WORKER', 'OFFICER', 'AI_ONLY', 'NO_AI'
   const [togglingUserId, setTogglingUserId] = useState(null);
+  const [actingUserId, setActingUserId] = useState(null);
+  const [openMenuUserId, setOpenMenuUserId] = useState(null);
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, isErr = false) => {
@@ -78,6 +81,61 @@ export default function UsersAiPermissionManager({ language = 'mr', onNotice = n
       showToast(err.response?.data?.message || (isMr ? 'त्रुटी आली, कृपया पुन्हा प्रयत्न करा.' : 'Failed to toggle AI access.'), true);
     } finally {
       setTogglingUserId(null);
+    }
+  };
+
+  // Handle User Block / Unblock Toggle
+  const handleToggleBlock = async (u) => {
+    const isSuspended = u.status === 'SUSPENDED';
+    const targetStatus = isSuspended ? 'ACTIVE' : 'SUSPENDED';
+    const actionWord = isSuspended ? (isMr ? 'अनब्लॉक' : 'unblock') : (isMr ? 'ब्लॉक' : 'block');
+    
+    if (!window.confirm(isMr ? `तुम्हाला नक्की '${u.full_name}' यांना ${actionWord} करायचे आहे का?` : `Are you sure you want to ${actionWord} '${u.full_name}'?`)) {
+      return;
+    }
+
+    setActingUserId(u.id);
+    const prevStatus = u.status;
+    // Optimistic UI update
+    setUsers((prev) =>
+      prev.map((item) => (item.id === u.id ? { ...item, status: targetStatus } : item))
+    );
+
+    try {
+      const res = await apiClient.put(`/admin/users/${u.id}/status`, { status: targetStatus });
+      const msg = res.data?.message || (targetStatus === 'SUSPENDED' 
+        ? `${u.full_name} यांना ब्लॉक करण्यात आले.` 
+        : `${u.full_name} यांना अनब्लॉक / सक्रिय करण्यात आले.`);
+      showToast(msg);
+    } catch (err) {
+      console.error('Failed to change user status:', err);
+      setUsers((prev) =>
+        prev.map((item) => (item.id === u.id ? { ...item, status: prevStatus } : item))
+      );
+      showToast(err.response?.data?.message || (isMr ? 'स्थिती बदलताना त्रुटी आली.' : 'Failed to change user status.'), true);
+    } finally {
+      setActingUserId(null);
+    }
+  };
+
+  // Handle User Permanent Delete
+  const handleDeleteUser = async (u) => {
+    if (!window.confirm(isMr 
+      ? `⚠️ सावधान: तुम्ही खरोखर '${u.full_name}' (ID: #${u.id}) चे खाते कायमचे हटवू (Delete) इच्छिता का? हा डेटा परत मिळवता येणार नाही.` 
+      : `⚠️ Warning: Are you sure you want to permanently delete user '${u.full_name}' (ID: #${u.id})? This action cannot be undone.`)) {
+      return;
+    }
+
+    setActingUserId(u.id);
+    try {
+      const res = await apiClient.delete(`/admin/users/${u.id}`);
+      setUsers((prev) => prev.filter((item) => item.id !== u.id));
+      showToast(res.data?.message || (isMr ? `'${u.full_name}' चे खाते यशस्वीरीत्या हटवले गेले.` : `User '${u.full_name}' deleted successfully.`));
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      showToast(err.response?.data?.message || (isMr ? 'वापरकर्ता हटवताना त्रुटी आली.' : 'Failed to delete user.'), true);
+    } finally {
+      setActingUserId(null);
     }
   };
 
@@ -370,7 +428,7 @@ export default function UsersAiPermissionManager({ language = 'mr', onNotice = n
               <th style={{ padding: '12px 14px' }}>{isMr ? 'भूमिका (Role)' : 'Role'}</th>
               <th style={{ padding: '12px 14px' }}>{isMr ? 'खाते स्थिती' : 'Account Status'}</th>
               <th style={{ padding: '12px 14px', textAlign: 'center' }}>{isMr ? '🤖 AI Chatbot परवानगी' : 'AI Chatbot Permission'}</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center' }}>{isMr ? 'थेट ॲक्सेस बदला' : 'Action Toggle'}</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center' }}>{isMr ? 'कारवाई (Actions)' : 'Actions'}</th>
             </tr>
           </thead>
           <tbody>
@@ -459,16 +517,19 @@ export default function UsersAiPermissionManager({ language = 'mr', onNotice = n
                     <td style={{ padding: '12px 14px' }}>
                       <span
                         style={{
-                          padding: '2px 8px',
+                          padding: '3px 9px',
                           borderRadius: '6px',
                           fontSize: '11px',
-                          fontWeight: '750',
-                          background: u.status === 'ACTIVE' || u.status === 'active' ? '#dcfce7' : '#f1f5f9',
-                          color: u.status === 'ACTIVE' || u.status === 'active' ? '#15803d' : '#64748b',
-                          border: `1px solid ${u.status === 'ACTIVE' || u.status === 'active' ? '#86efac' : '#cbd5e1'}`,
+                          fontWeight: '800',
+                          background: u.status === 'SUSPENDED' ? '#fee2e2' : (u.status === 'ACTIVE' || u.status === 'active' ? '#dcfce7' : '#fef3c7'),
+                          color: u.status === 'SUSPENDED' ? '#b91c1c' : (u.status === 'ACTIVE' || u.status === 'active' ? '#15803d' : '#b45309'),
+                          border: `1px solid ${u.status === 'SUSPENDED' ? '#fca5a5' : (u.status === 'ACTIVE' || u.status === 'active' ? '#86efac' : '#fde68a')}`,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
                         }}
                       >
-                        {u.status === 'ACTIVE' || u.status === 'active' ? '🟢 सक्रिय (Active)' : '⚪ ऑफलाइन'}
+                        {u.status === 'SUSPENDED' ? '🚫 ब्लॉक / निलंबित' : (u.status === 'ACTIVE' || u.status === 'active' ? '🟢 सक्रिय (Active)' : `⏳ ${u.status || 'प्रलंबित'}`)}
                       </span>
                     </td>
 
@@ -514,48 +575,169 @@ export default function UsersAiPermissionManager({ language = 'mr', onNotice = n
                       )}
                     </td>
 
-                    {/* Action Toggle Button */}
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    {/* 3-Dot Actions Menu */}
+                    <td style={{ padding: '10px 16px', textAlign: 'center', position: 'relative' }}>
                       <button
                         type="button"
-                        onClick={() => handleToggleAi(u)}
-                        disabled={isToggling}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuUserId(openMenuUserId === u.id ? null : u.id);
+                        }}
                         style={{
+                          width: '34px',
+                          height: '34px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          background: openMenuUserId === u.id ? '#eff6ff' : '#ffffff',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '6px',
-                          padding: '7px 14px',
-                          borderRadius: '8px',
-                          border: 'none',
-                          cursor: isToggling ? 'not-allowed' : 'pointer',
-                          fontWeight: '800',
-                          fontSize: '12px',
-                          background: hasAi
-                            ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                            : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                          color: '#ffffff',
-                          boxShadow: hasAi
-                            ? '0 2px 6px rgba(220, 38, 38, 0.25)'
-                            : '0 2px 6px rgba(16, 185, 129, 0.25)',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                           transition: 'all 0.15s ease',
-                          opacity: isToggling ? 0.6 : 1,
                         }}
-                        title={hasAi ? (isMr ? 'AI Chatbot ॲक्सेस बंद करा' : 'Revoke AI Access') : (isMr ? 'AI Chatbot ॲक्सेस सुरू करा' : 'Grant AI Access')}
+                        title={isMr ? 'पर्याय पहा (Actions)' : 'View options'}
                       >
-                        {isToggling ? (
-                          <span>⏳ ...</span>
-                        ) : hasAi ? (
-                          <>
-                            <span>🔒</span>
-                            <span>{isMr ? 'ॲक्सेस बंद करा' : 'Revoke AI'}</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>🤖</span>
-                            <span>{isMr ? 'AI ॲक्सेस द्या' : 'Grant AI'}</span>
-                          </>
-                        )}
+                        <MoreVertical size={17} style={{ color: openMenuUserId === u.id ? '#1d4ed8' : '#475569' }} />
                       </button>
+
+                      {/* Dropdown Menu Popup */}
+                      {openMenuUserId === u.id && (
+                        <>
+                          <div
+                            style={{
+                              position: 'fixed',
+                              inset: 0,
+                              zIndex: 60,
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuUserId(null);
+                            }}
+                          />
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              position: 'absolute',
+                              right: '16px',
+                              top: 'calc(100% - 4px)',
+                              zIndex: 70,
+                              minWidth: '215px',
+                              background: '#ffffff',
+                              borderRadius: '11px',
+                              boxShadow: '0 12px 28px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0,0,0,0.06)',
+                              border: '1px solid #e2e8f0',
+                              padding: '6px',
+                              textAlign: 'left',
+                              animation: 'fadeIn 0.15s ease-out',
+                            }}
+                          >
+                            <div style={{ padding: '6px 10px 4px', fontSize: '11px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              {u.full_name} (#{u.id})
+                            </div>
+
+                            {/* Option 1: AI Chatbot Toggle */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenMenuUserId(null);
+                                handleToggleAi(u);
+                              }}
+                              disabled={isToggling}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '9px',
+                                width: '100%',
+                                padding: '8px 10px',
+                                borderRadius: '7px',
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: isToggling ? 'not-allowed' : 'pointer',
+                                fontSize: '12.5px',
+                                fontWeight: '700',
+                                color: hasAi ? '#dc2626' : '#15803d',
+                                textAlign: 'left',
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                            >
+                              <span style={{ fontSize: '14px' }}>{hasAi ? '🔒' : '🤖'}</span>
+                              <span>
+                                {hasAi 
+                                  ? (isMr ? 'AI Chatbot ॲक्सेस बंद करा' : 'Revoke AI Access') 
+                                  : (isMr ? 'AI Chatbot परवानगी द्या' : 'Grant AI Access')}
+                              </span>
+                            </button>
+
+                            {/* Option 2: Block / Unblock Toggle */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenMenuUserId(null);
+                                handleToggleBlock(u);
+                              }}
+                              disabled={actingUserId === u.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '9px',
+                                width: '100%',
+                                padding: '8px 10px',
+                                borderRadius: '7px',
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: actingUserId === u.id ? 'not-allowed' : 'pointer',
+                                fontSize: '12.5px',
+                                fontWeight: '700',
+                                color: u.status === 'SUSPENDED' ? '#15803d' : '#b45309',
+                                textAlign: 'left',
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                            >
+                              <span style={{ fontSize: '14px' }}>{u.status === 'SUSPENDED' ? '🟢' : '🚫'}</span>
+                              <span>
+                                {u.status === 'SUSPENDED'
+                                  ? (isMr ? 'खाते अनब्लॉक करा' : 'Unblock Account')
+                                  : (isMr ? 'खाते ब्लॉक करा' : 'Block Account')}
+                              </span>
+                            </button>
+
+                            <div style={{ height: '1px', background: '#f1f5f9', margin: '5px 0' }} />
+
+                            {/* Option 3: Delete User */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenMenuUserId(null);
+                                handleDeleteUser(u);
+                              }}
+                              disabled={actingUserId === u.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '9px',
+                                width: '100%',
+                                padding: '8px 10px',
+                                borderRadius: '7px',
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: actingUserId === u.id ? 'not-allowed' : 'pointer',
+                                fontSize: '12.5px',
+                                fontWeight: '700',
+                                color: '#dc2626',
+                                textAlign: 'left',
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = '#fef2f2')}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                            >
+                              <span style={{ fontSize: '14px' }}>🗑️</span>
+                              <span>{isMr ? 'खाते कायमचे हटवा (Delete)' : 'Delete User Permanently'}</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );

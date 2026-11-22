@@ -27,6 +27,33 @@ export default function PrintableExecutiveReport({
     window.print();
   };
 
+  const handleExportWord = () => {
+    const reportElem = document.getElementById('printable-report-sheet');
+    if (!reportElem) return;
+    const content = reportElem.innerHTML;
+    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='utf-8'><title>${title}</title>
+    <style>
+      body { font-family: 'Arial', sans-serif; padding: 20px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+      th, td { border: 1px solid #cbd5e1; padding: 7px 10px; font-size: 10.5pt; text-align: left; }
+      th { background-color: #1e3a8a; color: #ffffff; font-weight: bold; }
+      h1, h2, h3 { color: #1e3a8a; margin-bottom: 6px; }
+    </style>
+    </head><body>`;
+    const footer = "</body></html>";
+    const sourceHTML = header + content + footer;
+    const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div
       className="printable-report-overlay"
@@ -93,6 +120,26 @@ export default function PrintableExecutiveReport({
             }}
           >
             🖨️ {isMr ? 'प्रिंट / PDF म्हणून सेव्ह करा' : 'Print / Save as PDF'}
+          </button>
+
+          <button
+            onClick={handleExportWord}
+            style={{
+              background: '#047857',
+              color: '#ffffff',
+              border: 'none',
+              padding: '8px 18px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            }}
+          >
+            📝 {isMr ? 'Word (.doc) डाऊनलोड' : 'Download Word (.doc)'}
           </button>
 
           {onClose && (

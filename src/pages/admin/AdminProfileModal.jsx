@@ -384,6 +384,27 @@ export default function AdminProfileModal({
             <span>📲</span>
             <span>{isMr ? 'OTP ने पासवर्ड रीसेट' : 'OTP Reset'}</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('id_card')}
+            style={{
+              padding: '10px 14px',
+              fontSize: '12.5px',
+              fontWeight: '750',
+              border: 'none',
+              background: 'transparent',
+              color: activeTab === 'id_card' ? '#1e60d5' : '#64748b',
+              borderBottom: activeTab === 'id_card' ? '2.5px solid #1e60d5' : '2.5px solid transparent',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>🪪</span>
+            <span>{isMr ? 'ओळखपत्र (ID Card)' : 'Identity Card'}</span>
+          </button>
         </div>
 
         {/* MODAL BODY */}
@@ -930,6 +951,191 @@ export default function AdminProfileModal({
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB 4: OFFICIAL IDENTITY CARD (Sample 1) */}
+          {activeTab === 'id_card' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px', padding: '10px 0' }}>
+              <div
+                id="web-admin-printable-id-card"
+                style={{
+                  width: '330px',
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
+                  border: '1.5px solid #cbd5e1',
+                  fontFamily: "'Mukta', 'Inter', sans-serif",
+                }}
+              >
+                {/* Header: App Name & Title */}
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+                    color: '#ffffff',
+                    padding: '16px 14px 12px',
+                    textAlign: 'center',
+                    borderBottom: '3px solid #d97706',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1.2px',
+                      fontWeight: '700',
+                      color: '#fef08a',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    MaKanisms Political Suite
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: '800', letterSpacing: '0.5px' }}>
+                    {isMr ? 'अधिकृत ओळखपत्र' : 'Official Identity Card'}
+                  </div>
+                </div>
+
+                {/* Body Content */}
+                <div style={{ padding: '18px 20px 20px', textAlign: 'center' }}>
+                  {/* Photo Frame */}
+                  <div
+                    style={{
+                      width: '90px',
+                      height: '90px',
+                      margin: '0 auto 12px',
+                      borderRadius: '50%',
+                      border: '3.5px solid #1e3a8a',
+                      overflow: 'hidden',
+                      background: '#e2e8f0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                    }}
+                  >
+                    <img
+                      src={user?.photo_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80"}
+                      alt="User"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+
+                  {/* Name */}
+                  <h3 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
+                    {profileForm.full_name || user?.full_name || 'प्रशासक / अधिकारी'}
+                  </h3>
+
+                  {/* ID Pill */}
+                  <div
+                    style={{
+                      display: 'inline-block',
+                      background: '#eff6ff',
+                      color: '#1e40af',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      padding: '3px 12px',
+                      borderRadius: '12px',
+                      border: '1px solid #bfdbfe',
+                      marginBottom: '14px',
+                    }}
+                  >
+                    ID: {user?.id_code || `MPS-2026-${String(user?.id || '0001').padStart(4, '0')}`}
+                  </div>
+
+                  {/* Key Details Box (strictly requested fields) */}
+                  <div
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      padding: '10px 14px',
+                      textAlign: 'left',
+                      fontSize: '12px',
+                    }}
+                  >
+                    {/* Role */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed #e2e8f0' }}>
+                      <span style={{ color: '#64748b', fontWeight: '600' }}>{isMr ? 'पद / हुद्दा :' : 'Role :'}</span>
+                      <span style={{ color: '#0f172a', fontWeight: '700' }}>{user?.role?.name || user?.role || 'ऍडमिन / समन्वयक'}</span>
+                    </div>
+
+                    {/* Phone Number */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed #e2e8f0' }}>
+                      <span style={{ color: '#64748b', fontWeight: '600' }}>{isMr ? 'मोबाईल नंबर :' : 'Phone No :'}</span>
+                      <span style={{ color: '#0f172a', fontWeight: '700' }}>{profileForm.phone || user?.phone || '+91 98220 11221'}</span>
+                    </div>
+
+                    {/* DOB */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed #e2e8f0' }}>
+                      <span style={{ color: '#64748b', fontWeight: '600' }}>{isMr ? 'जन्मतारीख :' : 'Date of Birth :'}</span>
+                      <span style={{ color: '#0f172a', fontWeight: '700' }}>{user?.dob || '15/08/1990'}</span>
+                    </div>
+
+                    {/* Address */}
+                    <div style={{ padding: '6px 0 2px' }}>
+                      <div style={{ color: '#64748b', fontWeight: '600', marginBottom: '2px' }}>
+                        {isMr ? 'पत्ता :' : 'Address :'}
+                      </div>
+                      <div style={{ color: '#0f172a', fontWeight: '600', lineHeight: '1.4' }}>
+                        {user?.address || 'मु. पो. कवठे महांकाळ, जिल्हा सांगली - ४१६४०५'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Strip */}
+                <div
+                  style={{
+                    background: '#0f172a',
+                    color: '#94a3b8',
+                    fontSize: '9.5px',
+                    padding: '7px',
+                    textAlign: 'center',
+                    fontWeight: '600',
+                  }}
+                >
+                  {isMr ? 'हे ओळखपत्र अधिकृत कामकाजासाठी वैध आहे.' : 'Official Authorized Identification Card'}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const printContent = document.getElementById('web-admin-printable-id-card');
+                    if (!printContent) return;
+                    const printWin = window.open('', '_blank', 'width=800,height=900');
+                    if (!printWin) { window.print(); return; }
+                    printWin.document.write(`
+                      <!DOCTYPE html><html><head><title>Identity Card</title><meta charset="utf-8"/>
+                      <style>
+                        body { margin: 40px; display: flex; justify-content: center; font-family: sans-serif; background: #f8fafc; }
+                        @media print { body { background: transparent; margin: 0; } }
+                      </style></head><body>\${printContent.innerHTML}<script>window.onload=function(){window.print();setTimeout(function(){window.close();},500);};</script></body></html>
+                    `);
+                    printWin.document.close();
+                  }}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: '#1e3a8a',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 10px rgba(30, 58, 138, 0.25)',
+                  }}
+                >
+                  <span>🖨️</span>
+                  <span>{isMr ? 'ओळखपत्र प्रिंट / सेव्ह करा' : 'Print / Save ID Card'}</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

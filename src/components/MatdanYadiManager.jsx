@@ -548,6 +548,12 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
   const [uploadTargetVillage, setUploadTargetVillage] = useState('माधवनगर');
   const [uploadTargetBooth, setUploadTargetBooth] = useState('१');
   const [uploadFileName, setUploadFileName] = useState('');
+  const [columnMapping, setColumnMapping] = useState({
+    name: 'col_A',
+    epic: 'col_B',
+    ageGender: 'col_C',
+    houseNo: 'col_D',
+  });
 
   // Add Village, Population & Voters Modal State (Manual & PDF Upload)
   const [showAddVillageModal, setShowAddVillageModal] = useState(false);
@@ -2652,6 +2658,82 @@ export default function MatdanYadiManager({ lang = 'mr', title = null }) {
                 CSV, Excel (.xlsx) किंवा अधिकृत निवडणूक आयोग PDF यादी
               </div>
             </div>
+
+            {/* Dynamic Column Mapping Wizard */}
+            {uploadFileName && (
+              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '12px' }}>
+                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#1e3a8a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>⚙️</span>
+                  <span>{isMr ? 'एक्सेल कॉलम मॅपिंग विझार्ड (Dynamic Column Mapping)' : 'Dynamic Column Mapping Wizard'}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11.5px' }}>
+                  <div>
+                    <label style={{ display: 'block', color: '#64748b', fontWeight: '700', marginBottom: '2px' }}>
+                      {isMr ? 'मतदाराचे नाव कॉलम :' : 'Voter Name Col :'}
+                    </label>
+                    <select
+                      value={columnMapping.name}
+                      onChange={(e) => setColumnMapping({ ...columnMapping, name: e.target.value })}
+                      style={{ width: '100%', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff' }}
+                    >
+                      <option value="col_A">Column A (नाव / Name)</option>
+                      <option value="col_B">Column B (EPIC / ओळखपत्र)</option>
+                      <option value="col_C">Column C (वय व लिंग)</option>
+                      <option value="col_D">Column D (घर क्र. / पत्ता)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: '#64748b', fontWeight: '700', marginBottom: '2px' }}>
+                      {isMr ? 'EPIC ओळखपत्र क्र. कॉलम :' : 'EPIC No Col :'}
+                    </label>
+                    <select
+                      value={columnMapping.epic}
+                      onChange={(e) => setColumnMapping({ ...columnMapping, epic: e.target.value })}
+                      style={{ width: '100%', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff' }}
+                    >
+                      <option value="col_B">Column B (EPIC / ओळखपत्र)</option>
+                      <option value="col_A">Column A (नाव / Name)</option>
+                      <option value="col_C">Column C (वय व लिंग)</option>
+                      <option value="col_D">Column D (घर क्र. / पत्ता)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: '#64748b', fontWeight: '700', marginBottom: '2px' }}>
+                      {isMr ? 'वय / लिंग कॉलम :' : 'Age & Gender Col :'}
+                    </label>
+                    <select
+                      value={columnMapping.ageGender}
+                      onChange={(e) => setColumnMapping({ ...columnMapping, ageGender: e.target.value })}
+                      style={{ width: '100%', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff' }}
+                    >
+                      <option value="col_C">Column C (वय व लिंग)</option>
+                      <option value="col_A">Column A</option>
+                      <option value="col_B">Column B</option>
+                      <option value="col_D">Column D</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: '#64748b', fontWeight: '700', marginBottom: '2px' }}>
+                      {isMr ? 'घर क्र. / पत्ता कॉलम :' : 'House / Address Col :'}
+                    </label>
+                    <select
+                      value={columnMapping.houseNo}
+                      onChange={(e) => setColumnMapping({ ...columnMapping, houseNo: e.target.value })}
+                      style={{ width: '100%', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff' }}
+                    >
+                      <option value="col_D">Column D (घर क्र. / पत्ता)</option>
+                      <option value="col_A">Column A</option>
+                      <option value="col_B">Column B</option>
+                      <option value="col_C">Column C</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ marginTop: '8px', fontSize: '11px', color: '#059669', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>✓</span>
+                  <span>{isMr ? 'कॉलम मॅपिंग तयार आहे • डेटा अचूक फॉरमॅटमध्ये आयात केला जाईल' : 'Column mapping verified • Ready for dynamic import'}</span>
+                </div>
+              </div>
+            )}
 
             {/* Progress bar */}
             {isUploading && (

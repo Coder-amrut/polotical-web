@@ -6,7 +6,7 @@ import { getToken, removeToken } from '../utils/tokenStorage';
  * Uses Sanctum opaque Bearer token authentication.
  */
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://keywords-readers-zshops-zip.trycloudflare.com/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api',
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',

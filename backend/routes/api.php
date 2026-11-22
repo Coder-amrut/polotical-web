@@ -46,6 +46,11 @@ Route::prefix('auth')->group(function () {
     Route::post('/send-otp', [AuthController::class, 'sendOtp']);
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
 
+    // Forgot Password Flow via Registered Phone & SMS OTP
+    Route::post('/forgot-password/send-otp', [AuthController::class, 'forgotPasswordSendOtp']);
+    Route::post('/forgot-password/verify-otp', [AuthController::class, 'forgotPasswordVerifyOtp']);
+    Route::post('/forgot-password/reset', [AuthController::class, 'forgotPasswordReset']);
+
     // Authenticated-only auth endpoints
     Route::middleware('auth:sanctum')->group(function () {
 

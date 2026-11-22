@@ -49,6 +49,38 @@ export default function DataExportCenter({ lang = 'mr' }) {
     URL.revokeObjectURL(url);
   };
 
+  // Export as Word Document (.doc / .docx compatible)
+  const exportToWord = (filename, title, headers, rows) => {
+    let tableHtml = `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;">
+      <thead><tr style="background:#1e3a8a;color:#ffffff;">`;
+    headers.forEach((h) => { tableHtml += `<th>${h}</th>`; });
+    tableHtml += `</tr></thead><tbody>`;
+    rows.forEach((r) => {
+      tableHtml += `<tr>`;
+      r.forEach((cell) => { tableHtml += `<td>${cell ?? '-'}</td>`; });
+      tableHtml += `</tr>`;
+    });
+    tableHtml += `</tbody></table>`;
+
+    const htmlDoc = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>${title}</title></head>
+      <body style="font-family:Arial,sans-serif;padding:24px;">
+        <h2 style="color:#1e3a8a;margin-bottom:4px;">${title}</h2>
+        <p style="color:#64748b;font-size:11pt;margin-top:0;">दिनांक: ${new Date().toLocaleDateString(isMr ? 'mr-IN' : 'en-US')} • अधिकृत राजकीय अहवाल</p>
+        ${tableHtml}
+      </body></html>`;
+
+    const blob = new Blob(['\ufeff', htmlDoc], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename.replace(/\.(csv|pdf|json)$/i, '') + '.doc';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Export Complete Multi-table Database Backup in a Structured Master CSV (Excel Compatible)
   const exportFullBackupCSV = (filename, data) => {
     const lines = [];
@@ -236,6 +268,7 @@ export default function DataExportCenter({ lang = 'mr' }) {
     URL.revokeObjectURL(url);
   };
 
+
   // Open Master Printable PDF Dossier for Full Database Backup
   const openFullBackupPDF = (data) => {
     const users = data.users || [];
@@ -409,6 +442,18 @@ export default function DataExportCenter({ lang = 'mr' }) {
               ? 'संपूर्ण डेटाबेस Master Excel/CSV बॅकअप यशस्वीरीत्या डाऊनलोड झाला!'
               : 'Master Database Excel/CSV backup downloaded successfully!'
           );
+        } else if (activeFormat === 'docx') {
+          exportToWord(
+            `Political_Project_Master_DB_Backup_${nowStr}.doc`,
+            isMr ? 'संपूर्ण डेटाबेस महा-अहवाल' : 'Master Database Dossier',
+            ['मॉड्यूल / टेबल', 'रेकॉर्ड्स संख्या'],
+            Object.entries(records).map(([k, v]) => [k, Array.isArray(v) ? `${v.length} नोंदी` : String(v)])
+          );
+          setSuccessToast(
+            isMr
+              ? 'संपूर्ण डेटाबेस Word (.doc) अहवाल यशस्वीरीत्या डाऊनलोड झाला!'
+              : 'Master Database Word (.doc) document downloaded successfully!'
+          );
         } else if (activeFormat === 'pdf') {
           openFullBackupPDF(records);
           setSuccessToast(
@@ -457,6 +502,8 @@ export default function DataExportCenter({ lang = 'mr' }) {
 
         if (activeFormat === 'csv') {
           exportToCSV(`System_Users_List_${nowStr}.csv`, headers, rows);
+        } else if (activeFormat === 'docx') {
+          exportToWord(`System_Users_List_${nowStr}.doc`, isMr ? 'प्रणाली वापरकर्ते व पदाधिकारी यादी' : 'System Users Directory', headers, rows);
         } else {
           setPrintableData({
             title: isMr ? 'प्रणाली वापरकर्ते व पदाधिकारी यादी (System Users Roster)' : 'System Users & Officers Directory',
@@ -491,6 +538,8 @@ export default function DataExportCenter({ lang = 'mr' }) {
 
         if (activeFormat === 'csv') {
           exportToCSV(`Field_Survey_Submissions_${nowStr}.csv`, headers, rows);
+        } else if (activeFormat === 'docx') {
+          exportToWord(`Field_Survey_Submissions_${nowStr}.doc`, isMr ? 'मतदार सर्वेक्षण व पाहणी अहवाल' : 'Field Survey Report', headers, rows);
         } else {
           setPrintableData({
             title: isMr ? 'मतदार सर्वेक्षण व प्रत्यक्ष पाहणी अहवाल' : 'Voter Field Survey Submissions Ledger',
@@ -522,6 +571,8 @@ export default function DataExportCenter({ lang = 'mr' }) {
 
         if (activeFormat === 'csv') {
           exportToCSV(`Citizen_CRM_Voter_Directory_${nowStr}.csv`, headers, rows);
+        } else if (activeFormat === 'docx') {
+          exportToWord(`Citizen_CRM_Voter_Directory_${nowStr}.doc`, isMr ? 'नागरिक संपर्क ३६०° मतदार यादी' : 'Citizen 360 CRM Directory', headers, rows);
         } else {
           setPrintableData({
             title: isMr ? 'नागरिक संपर्क ३६०° मतदार यादी' : 'Citizen 360 CRM Directory',
@@ -556,6 +607,8 @@ export default function DataExportCenter({ lang = 'mr' }) {
 
         if (activeFormat === 'csv') {
           exportToCSV(`Booth_Progress_Report_${nowStr}.csv`, headers, rows);
+        } else if (activeFormat === 'docx') {
+          exportToWord(`Booth_Progress_Report_${nowStr}.doc`, isMr ? 'बूथनिहाय प्रगती व मतदार अहवाल' : 'Booth Progress Report', headers, rows);
         } else {
           setPrintableData({
             title: isMr ? 'बूथनिहाय प्रगती व मतदार सर्वेक्षण अहवाल' : 'Booth-wise Progress Report',
@@ -586,6 +639,8 @@ export default function DataExportCenter({ lang = 'mr' }) {
 
         if (activeFormat === 'csv') {
           exportToCSV(`Karyakarta_Roster_${nowStr}.csv`, headers, rows);
+        } else if (activeFormat === 'docx') {
+          exportToWord(`Karyakarta_Roster_${nowStr}.doc`, isMr ? 'कार्यकर्ते कामगिरी व हजेरी अहवाल' : 'Worker Performance Roster', headers, rows);
         } else {
           setPrintableData({
             title: isMr ? 'कार्यकर्ते कामगिरी व क्षेत्रीय हजेरी अहवाल' : 'Worker Performance Roster',
@@ -619,6 +674,8 @@ export default function DataExportCenter({ lang = 'mr' }) {
 
         if (activeFormat === 'csv') {
           exportToCSV(`Civic_Grievances_Ledger_${nowStr}.csv`, headers, rows);
+        } else if (activeFormat === 'docx') {
+          exportToWord(`Civic_Grievances_Ledger_${nowStr}.doc`, isMr ? 'नागरी समस्या व तक्रारी नोंदवही' : 'Civic Grievances Ledger', headers, rows);
         } else {
           setPrintableData({
             title: isMr ? 'नागरी समस्या व तक्रारी निवारण नोंदवही' : 'Civic Grievances Ledger',
@@ -648,6 +705,8 @@ export default function DataExportCenter({ lang = 'mr' }) {
 
         if (activeFormat === 'csv') {
           exportToCSV(`Pending_Tasks_Report_${nowStr}.csv`, headers, rows);
+        } else if (activeFormat === 'docx') {
+          exportToWord(`Pending_Tasks_Report_${nowStr}.doc`, isMr ? 'कामांचे वाटप व प्रगती अहवाल' : 'Tasks Report', headers, rows);
         } else {
           setPrintableData({
             title: isMr ? 'प्रलंबित कामे व पाठपुरावा अहवाल' : 'Pending Tasks Dossier',
@@ -677,6 +736,8 @@ export default function DataExportCenter({ lang = 'mr' }) {
 
         if (activeFormat === 'csv') {
           exportToCSV(`Meetings_and_Tours_Schedule_${nowStr}.csv`, headers, rows);
+        } else if (activeFormat === 'docx') {
+          exportToWord(`Meetings_and_Tours_Schedule_${nowStr}.doc`, isMr ? 'दौरे व जाहीर सभा वेळापत्रक' : 'Meetings Schedule', headers, rows);
         } else {
           setPrintableData({
             title: isMr ? 'दौरे व जाहीर सभा वेळापत्रक पत्रिका' : 'Tours & Townhalls Schedule',
@@ -705,6 +766,8 @@ export default function DataExportCenter({ lang = 'mr' }) {
 
         if (activeFormat === 'csv') {
           exportToCSV(`Survey_Forms_Templates_${nowStr}.csv`, headers, rows);
+        } else if (activeFormat === 'docx') {
+          exportToWord(`Survey_Forms_Templates_${nowStr}.doc`, isMr ? 'सर्वेक्षण फॉर्म्स व प्रश्नावली सूची' : 'Survey Forms List', headers, rows);
         } else {
           setPrintableData({
             title: isMr ? 'सर्वेक्षण फॉर्म्स व प्रश्नावली सूची' : 'Survey Forms Templates Ledger',
@@ -1123,6 +1186,33 @@ export default function DataExportCenter({ lang = 'mr' }) {
                 onChange={() => setSelectedFormat('pdf')}
               />
               📄 {isMr ? 'अधिकृत PDF अहवाल (प्रिंट व जतन)' : 'Official PDF Dossier (Print / Save)'}
+            </label>
+
+            {/* Word Document */}
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 18px',
+                borderRadius: '10px',
+                border: selectedFormat === 'docx' ? '2px solid #059669' : '1px solid #cbd5e1',
+                background: selectedFormat === 'docx' ? '#ecfdf5' : '#ffffff',
+                cursor: 'pointer',
+                fontWeight: '700',
+                fontSize: '13.5px',
+                color: selectedFormat === 'docx' ? '#047857' : '#334155',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <input
+                type="radio"
+                name="format"
+                value="docx"
+                checked={selectedFormat === 'docx'}
+                onChange={() => setSelectedFormat('docx')}
+              />
+              📝 {isMr ? 'Word (.doc) दस्तऐवज अहवाल' : 'Word (.doc) Document Report'}
             </label>
 
             {/* JSON System Backup */}
