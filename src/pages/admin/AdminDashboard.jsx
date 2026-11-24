@@ -633,8 +633,8 @@ function AdminDashboard() {
           },
           {
             id: 'forms',
-            label_mr: 'सर्व्हे फॉर्म बिल्डर',
-            label_en: 'Form Builder',
+            label_mr: 'सर्व्हे व्यवस्थापन',
+            label_en: 'Survey Management',
             iconKey: 'forms',
           },
         ],
@@ -1402,7 +1402,7 @@ function AdminDashboard() {
                 },
                 {
                   id: 'forms',
-                  label: isMr ? 'सर्व्हे फॉर्म बिल्डर' : 'Form Builder',
+                  label: isMr ? 'सर्व्हे व्यवस्थापन' : 'Survey Management',
                   desc: isMr ? 'मतदार सर्व्हे टेम्पलेट तयार करा' : 'Design field survey question sets',
                   icon: '📋',
                   theme: { bg: '#f0fdf4', border: '#bbf7d0', borderTop: '3.5px solid #138808', iconBg: 'linear-gradient(135deg, #138808 0%, #046A38 100%)', text: '#047857' },
@@ -3582,7 +3582,7 @@ function AdminDashboard() {
                       {isMr ? 'प्रशासन विभाग' : 'Dept of Administration'}
                     </div>
                     <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: '#ffffff', letterSpacing: '0.3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {isMr ? 'डिजिटल EVM नियंत्रण' : 'Digital EVM Command'}
+                      {isMr ? 'डिजिटल निवडणूक नियंत्रण' : 'Digital Election Command'}
                     </h2>
                   </div>
                 </div>
