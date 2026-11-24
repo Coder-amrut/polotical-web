@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\ProjectGeographyLookupController;
 use App\Http\Controllers\Admin\SurveyFormController;
 use App\Http\Controllers\Admin\PublishedFormController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\ElectionAnalysisController;
 use App\Http\Controllers\Admin\AdminAdvancedController;
 use App\Http\Controllers\Admin\AdminChatbotController;
 use App\Http\Controllers\Admin\AdminAttendanceController;
@@ -17,7 +18,6 @@ use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\Neta\NetaDashboardController;
 use App\Http\Controllers\Worker\WorkerDashboardController;
 use App\Http\Controllers\Worker\KarkartaEvmController;
-use App\Http\Controllers\Admin\ElectionAnalysisController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 
@@ -86,6 +86,7 @@ Route::prefix('master-data')->group(function () {
 
     // GET /api/master-data/talukas?district_code=466
     Route::get('/talukas', [MasterDataController::class, 'talukas']);
+    Route::post('/talukas', [MasterDataController::class, 'storeTaluka']);
 
     // GET /api/master-data/villages?district_code=466&taluka_code=4201
     Route::get('/villages', [MasterDataController::class, 'villages']);
@@ -169,7 +170,7 @@ Route::prefix('admin')
         // POST /api/admin/users  (admin-created Worker/Officer)
         Route::post('/users', [AdminUserController::class, 'store']);
 
-        // User Management Hub endpoints
+        // User Management endpoints (Hub, Role, Status/Block, Reset Password, Delete)
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::put('/users/{id}/role', [AdminUserController::class, 'updateRole'])->whereNumber('id');
         Route::put('/users/{id}/status', [AdminUserController::class, 'updateStatus'])->whereNumber('id');
@@ -278,6 +279,9 @@ Route::prefix('admin')
         Route::get('/users-list', [RoleController::class, 'getUsersList']);
         Route::get('/users/{userId}/permissions', [RoleController::class, 'getUserPermissions']);
         Route::put('/users/{userId}/permissions', [RoleController::class, 'syncUserPermissions']);
+        Route::post('/users/{userId}/permissions/give', [RoleController::class, 'giveUserPermission']);
+        Route::delete('/users/{userId}/permissions/{permissionId}', [RoleController::class, 'revokeUserPermission']);
+
         // 10. Election Analysis Desk
         Route::get('/election-analyses', [ElectionAnalysisController::class, 'index']);
         Route::post('/election-analyses', [ElectionAnalysisController::class, 'store']);
@@ -295,6 +299,15 @@ Route::prefix('election-analyses')->group(function () {
     Route::delete('/{idOrUuid}', [ElectionAnalysisController::class, 'destroy']);
 });
 
+// Direct & Dynamic Voter List, Booths and Election Prabhari Routes
+Route::get('/voters-list', [NetaDashboardController::class, 'votersList']);
+Route::post('/voters-list', [NetaDashboardController::class, 'storeVoter']);
+Route::post('/voters-list/upload', [NetaDashboardController::class, 'uploadVoters']);
+Route::get('/voter-list/village-statistics', [NetaDashboardController::class, 'getVillageStatistics']);
+Route::post('/voter-list/village', [NetaDashboardController::class, 'storeVillage']);
+Route::post('/voter-list/upload-village-pdf', [NetaDashboardController::class, 'uploadVillagePdf']);
+Route::get('/voter-list/booths-directory', [NetaDashboardController::class, 'getBoothsDirectory']);
+
 // Public admin forgot password routes
 Route::post('/admin/forgot-password/request-otp', [AdminAdvancedController::class, 'forgotPasswordRequestOtp']);
 Route::post('/admin/forgot-password/verify-otp', [AdminAdvancedController::class, 'forgotPasswordVerifyOtp']);
@@ -308,7 +321,6 @@ Route::prefix('neta')
         Route::get('/overview', [NetaDashboardController::class, 'overview']);
         Route::get('/booths', [NetaDashboardController::class, 'booths']);
         Route::get('/geography-filters', [NetaDashboardController::class, 'geographyFilters']);
-        Route::post('/set-active-booth', [NetaDashboardController::class, 'setActiveBooth']);
         Route::get('/karyakartas', [NetaDashboardController::class, 'karyakartas']);
         Route::post('/karyakartas', [NetaDashboardController::class, 'storeKaryakarta']);
         Route::put('/karyakartas/{id}', [NetaDashboardController::class, 'updateKaryakarta'])->whereNumber('id');
@@ -336,11 +348,6 @@ Route::prefix('neta')
         Route::post('/crm/citizens/{id}/interactions', [NetaDashboardController::class, 'storeCrmInteraction'])->whereNumber('id');
         Route::post('/crm/citizens/{id}/issues', [NetaDashboardController::class, 'storeCrmIssue'])->whereNumber('id');
         Route::patch('/crm/issues/{issueId}/status', [NetaDashboardController::class, 'updateCrmIssueStatus'])->whereNumber('issueId');
-
-        // Profile & Password Management
-        Route::post('/change-password', [NetaDashboardController::class, 'changePassword']);
-        Route::post('/forgot-password/request-otp', [NetaDashboardController::class, 'forgotPasswordRequestOtp']);
-        Route::post('/forgot-password/verify-otp', [NetaDashboardController::class, 'forgotPasswordVerifyOtp']);
     });
 
 // ---------------------------------------------------------------------------
@@ -388,6 +395,10 @@ Route::prefix('worker')->group(function () {
         Route::post('/start-election', [KarkartaEvmController::class, 'startElection']);
         Route::post('/end-election', [KarkartaEvmController::class, 'endElection']);
     });
+
+    // AI Database Chatbot Assistant for Application
+    Route::get('/chatbot/suggestions', [AdminChatbotController::class, 'getSuggestions']);
+    Route::post('/chatbot/query', [AdminChatbotController::class, 'handleQuery']);
 });
 
 // Direct & Dynamic Voter List, Booths and Election Prabhari Routes
