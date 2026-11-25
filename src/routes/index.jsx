@@ -7,6 +7,7 @@ import Unauthorized from '../pages/Unauthorized';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import OfficerDashboard from '../pages/officer_Neta/OfficerDashboard';
 import KarkartaEvmVotingSystem from '../pages/admin/AdminEvmVotingSystem';
+import PublicSurveyResponder from '../pages/public/PublicSurveyResponder';
 import { ProtectedRoute } from './ProtectedRoute';
 import { RoleRoute } from './RoleRoute';
 import { RoleName } from '../api/contracts';
@@ -25,6 +26,11 @@ function AppRoutes() {
       <Route path="/voting" element={<KarkartaEvmVotingSystem isMr={true} isAdmin={false} />} />
       <Route path="/voting/:id" element={<KarkartaEvmVotingSystem isMr={true} isAdmin={false} />} />
       <Route path="/evm-ballot" element={<KarkartaEvmVotingSystem isMr={true} isAdmin={false} />} />
+
+      {/* Public Survey Portal (Direct Link from WhatsApp & Social Media Shares) */}
+      <Route path="/survey/public/:uuid" element={<PublicSurveyResponder />} />
+      <Route path="/public-survey/:uuid" element={<PublicSurveyResponder />} />
+      <Route path="/survey/:uuid" element={<PublicSurveyResponder />} />
 
       {/* Admin Protected Routes */}
       <Route
