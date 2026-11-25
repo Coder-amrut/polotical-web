@@ -476,7 +476,7 @@ export default function OfficerDashboard() {
           label_mr: 'कार्यकर्त्यांचे काम व कामगिरी डॅशबोर्ड',
           label_en: 'Karyakarta Work & Performance',
           short_label_mr: 'कार्यकर्ते कामगिरी',
-          short_label_en: 'Workers Performance',
+          short_label_en: 'Officers Performance',
           iconKey: 'workers_performance',
         },
         {

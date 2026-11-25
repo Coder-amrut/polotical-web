@@ -381,7 +381,7 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
     if (!isRegistered && !selectedAppUser && !editItem) {
       setUserValidationError(
         isMr
-          ? '⚠️ हा युझर ॲपवर नोंदणीकृत नाही! केवळ ॲपवर नोंदणीकृत कार्यकर्त्याचीच निवड करता येईल.'
+          ? '⚠️ हा युझर ॲपवर नोंदणीकृत नाही! केवळ ॲपवर नोंदणीकृत अधिकाऱ्याचीच निवड करता येईल.'
           : '⚠️ This user is not registered on the app! Only registered users can be appointed.'
       );
       showToast(isMr ? 'केवळ ॲप नोंदणीकृत युझरच निवडा!' : 'Only registered users can be appointed!');
@@ -1324,7 +1324,7 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '13px', background: '#ffffff', boxSizing: 'border-box' }}
                   required
                 >
-                  <option value="booth_karyakarta">{isMr ? '१. निवडणूक प्रभारी - बूथ कार्यकर्ता' : '1. Election Prabhari - Booth Worker'}</option>
+                  <option value="booth_karyakarta">{isMr ? '१. निवडणूक प्रभारी - बूथ अधिकारी' : '1. Election Prabhari - Booth Officer'}</option>
                   <option value="booth_pramukh">{isMr ? '२. निवडणूक प्रभारी - बूथ प्रमुख' : '2. Election Prabhari - Booth Pramukh'}</option>
                   <option value="booth_area_pramukh">{isMr ? '३. निवडणूक प्रभारी - बूथ एरिया प्रमुख' : '3. Election Prabhari - Booth Area Pramukh'}</option>
                   <option value="taluka_pramukh">{isMr ? '४. निवडणूक प्रभारी - तालुका प्रमुख' : '4. Election Prabhari - Taluka Pramukh'}</option>
@@ -1743,7 +1743,7 @@ export default function ElectionPrabhariManager({ isMr = true, lang = 'mr' }) {
                           onChange={(e) => handleUpdateAdditionalPrabhari(extra.id, 'role_type', e.target.value)}
                           style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '13px', background: '#ffffff', boxSizing: 'border-box' }}
                         >
-                          <option value="booth_karyakarta">{isMr ? '१. निवडणूक प्रभारी - बूथ कार्यकर्ता' : '1. Election Prabhari - Booth Worker'}</option>
+                          <option value="booth_karyakarta">{isMr ? '१. निवडणूक प्रभारी - बूथ अधिकारी' : '1. Election Prabhari - Booth Officer'}</option>
                           <option value="booth_pramukh">{isMr ? '२. निवडणूक प्रभारी - बूथ प्रमुख' : '2. Election Prabhari - Booth Pramukh'}</option>
                           <option value="booth_area_pramukh">{isMr ? '३. निवडणूक प्रभारी - बूथ एरिया प्रमुख' : '3. Election Prabhari - Booth Area Pramukh'}</option>
                           <option value="taluka_pramukh">{isMr ? '४. निवडणूक प्रभारी - तालुका प्रमुख' : '4. Election Prabhari - Taluka Pramukh'}</option>

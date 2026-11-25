@@ -108,7 +108,7 @@ function Register() {
       </div>
       <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', margin: '0 0 8px 0' }}>Create an Account</h2>
       <p style={{ color: '#4b5563', fontSize: '14px', margin: '0 0 24px 0' }}>
-        Register as a Field Worker or Field Officer.
+        Register as a Field Officer.
       </p>
 
       {successMessage && (
